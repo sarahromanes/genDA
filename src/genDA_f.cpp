@@ -4,9 +4,8 @@ Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(mY);
   DATA_MATRIX(mX_cov);
-  DATA_MATRIX(mOnes);
   DATA_VECTOR(vsigma2);
-  DATA_IVECTOR(respose_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
+  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
   DATA_INTEGER(d);
   PARAMETER_VECTOR(vtheta);
     
@@ -15,38 +14,38 @@ Type objective_function<Type>::operator() ()
   int p = mX_cov.array().cols();
   
   Type sigma2_beta0 = vsigma2(0); // remembering that C++ starts at index 0
-  matrix<Type> vsigma2_beta = vsigma2.segment(1,m);
-  matrix<Type> vsigma2_lambda = vsigma2.segment(m+1, m+m);
-  matrix<Type> vsigma_tau = vsigma2.segment(m+m+1, n+m+m);
+  matrix<Type> vsigma2_beta = vsigma2.segment(1,m); // vector.segement(i,n) takes a Block containing n elements, starting at position i.
+  matrix<Type> vsigma2_lambda = vsigma2.segment(m+1, m); 
+  matrix<Type> vsigma_tau = vsigma2.tail(n); // vector.tail(n) takes a Block containing the last n elements
   
-  matrix<Type> vtau = vtheta.segment(0, n-1);
-  matrix<Type> vbeta0 = vtheta.segment(n, n+m-1);
-  
+  matrix<Type> vtau = vtheta.head(n); // vector.head(n) takes a Block containing the first n elements
+  matrix<Type> vbeta0 = vtheta.segment(n, m);
+
   matrix<Type> mB(p,m); 
   for(int j = 0; j < m; j++){
-    mB.array().col(j) = vtheta.segment(n+m+((j-1)*p), p+ n+m+((j-1)*p)-1); // update the jth col of mB
+    mB.array().col(j) = vtheta.segment(n+m+(j*p),p); // update the jth col of mB
   }
   
   matrix<Type> mU(n,d);
-  for(int i = 0; i <n; i++){
-    mU.array().row(i)= vtheta.segment(n+m+((i-1)*d), d + n+m+((i-1)*d) -1); // update the ith row of mU
+  for(int k = 0; k <d; k++){
+    mU.array().col(k)= vtheta.segment(n+m+(m*p)+(k*n), n); // update the kth col of mU
   }
   
   matrix<Type> mL(d,m);
   mL.setZero();  // Since vectors, matrices and arrays are not zero-initialized in C++, a zero initialized object is created using Eigens setZero():
   
   int count = n + m + (m*p) +(n*d);
-  for(int j = 0; j < m; j++){ // two layers of iteration are needed - was not possible to subset cols/rows of matrices in C++
-    for(int k = 0; k < d; k++){
+  for(int k = 0; k < d; k++){ // two layers of iteration are needed - was not possible to subset cols/rows of matrices in C++
+    for(int j = 0; j < m; j++){
       if(j >= k){
-        mL(j,k) = vtheta(count + (d*j) + k);
+        mL(k,j) = vtheta(count + (d*j) + k);
       }
       if(j == k){
-        mL(j, k) = exp(mL(j,k));
+        mL(k, j) = exp(mL(k,j));
       }
     }
   }
-
+  
   matrix<Type> mOnes(n,m); // create a matrix of ones, and then extract a row and column below to get mOnes (length m, and n) below
   for(int i =0; i < n; i++){
       for(int j = 0; j < m; j++){
@@ -57,7 +56,7 @@ Type objective_function<Type>::operator() ()
   matrix<Type> oneM = mOnes.array().row(0);
   matrix<Type> oneN = mOnes.array().col(0);
   
-  matrix<Type> mEta_fixed = vtau.transpose()*oneM + oneN.transpose()*vbeta0 + mX_cov*mB;
+  matrix<Type> mEta_fixed = vtau*oneM + oneN*vbeta0.transpose() + mX_cov*mB;
   matrix<Type> mEta_latent = mU*mL;
   matrix<Type> mEta = mEta_fixed + mEta_latent;
   
@@ -97,5 +96,20 @@ Type objective_function<Type>::operator() ()
 
   Type nll = -(sum(vl) + pen); //return negative of total value (not sure if you can fn scale this? just in case - isn't too hard anyways)
 
+  // REPORT VALUES TO R FOR CHECKING
+
+  REPORT(mL);
+  REPORT(mU);
+  REPORT(mB);
+  REPORT(vtau);
+  REPORT(vbeta0);
+  REPORT(sigma2_beta0);
+  REPORT(vsigma2_lambda);
+  REPORT(vsigma2_beta);
+  REPORT(vsigma_tau);
+  REPORT(mEta);
+  REPORT(nll);
+
   return(nll);
+ 
 }
