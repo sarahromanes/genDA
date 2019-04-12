@@ -3,45 +3,42 @@ template<class Type>
 Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(mY);
-  DATA_MATRIX(mX_cov);
+  DATA_MATRIX(mX);
   DATA_VECTOR(vsigma2);
-  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
+  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal)
   DATA_INTEGER(d);
-  PARAMETER_VECTOR(vtheta);
-    
-  int n = mX_cov.array().rows();
+  PARAMETER_VECTOR(log_vsigma_norm);
+  PARAMETER_MATRIX(mB);
+  PARAMETER_VECTOR(lambda);
+  PARAMETER_MATRIX(mU);
+  PARAMETER_MATRIX(vtau);
+  PARAMETER_MATRIX(vbeta0);
+
+  int n = mX.array().rows();
   int m = mY.array().cols();
-  int p = mX_cov.array().cols();
+
+  vector<Type> vsigma_norm = exp(log_vsigma_norm);
   
   Type sigma2_beta0 = vsigma2(0); // remembering that C++ starts at index 0
   matrix<Type> vsigma2_beta = vsigma2.segment(1,m); // vector.segement(i,n) takes a Block containing n elements, starting at position i.
   matrix<Type> vsigma2_lambda = vsigma2.segment(m+1, m); 
   matrix<Type> vsigma_tau = vsigma2.tail(n); // vector.tail(n) takes a Block containing the last n elements
   
-  matrix<Type> vtau = vtheta.head(n); // vector.head(n) takes a Block containing the first n elements
-  matrix<Type> vbeta0 = vtheta.segment(n, m);
+  // To create lambda as matrix upper triangle
 
-  matrix<Type> mB(p,m); 
-  for(int j = 0; j < m; j++){
-    mB.array().col(j) = vtheta.segment(n+m+(j*p),p); // update the jth col of mB
-  }
-  
-  matrix<Type> mU(n,d);
-  for(int k = 0; k <d; k++){
-    mU.array().col(k)= vtheta.segment(n+m+(m*p)+(k*n), n); // update the kth col of mU
-  }
-  
   matrix<Type> mL(d,m);
-  mL.setZero();  // Since vectors, matrices and arrays are not zero-initialized in C++, a zero initialized object is created using Eigens setZero():
-  
-  int count = n + m + (m*p) +(n*d);
-  for(int k = 0; k < d; k++){ // two layers of iteration are needed - was not possible to subset cols/rows of matrices in C++
-    for(int j = 0; j < m; j++){
-      if(j >= k){
-        mL(k,j) = vtheta(count + (d*j) + k);
-      }
-      if(j == k){
-        mL(k, j) = exp(mL(k,j));
+  if(d>0){
+
+    for (int j=0; j<m; j++){
+      for (int k=0; k<d; k++){
+        if (j < k){
+          mL(k,j) = 0;
+        } else{
+          mL(k,j) = lambda(j);
+          if (k > 0){
+            mL(k,j) = lambda(k+j+k*m-(k*(k-1))/2-2*k);
+          }
+        }
       }
     }
   }
@@ -55,46 +52,94 @@ Type objective_function<Type>::operator() ()
 
   matrix<Type> oneM = mOnes.array().row(0);
   matrix<Type> oneN = mOnes.array().col(0);
-  
-  matrix<Type> mEta_fixed = vtau*oneM + oneN*vbeta0.transpose() + mX_cov*mB;
-  matrix<Type> mEta_latent = mU*mL;
-  matrix<Type> mEta = mEta_fixed + mEta_latent;
-  
-  // CALCULATE LOG LIKELIHOOD
-  matrix<Type> ml(n,m);
+
+  matrix<Type> mEta = vtau*oneM + oneN*vbeta0.transpose() + mX*mB +  mU*mL;
+
+    // CALCULATE LOG LIKELIHOOD
+
+  Type nll = 0; // (We will use  += -= *= /= incremental operators to add/subtract to the nll in increments. Note this is the negative ll and as such we will subtract when we mean to add etc... )
+
   for(int i = 0; i < n; i++){
     for(int j = 0; j < m; j++){
       if(response_types(j)==1){ 
         // BERNOULLI DISTRIBUTION
-        ml(i,j) = mY(i,j)*mEta(i,j) - log(1 + exp(mEta(i,j)));
+        nll -= mY(i,j)*mEta(i,j) - log(1 + exp(mEta(i,j)));
       }
       if(response_types(j)==2){
         // POISSON DISTRIBUTION
-        ml(i,j) = mY(i,j)*mEta(i,j) -  exp(mEta(i,j));
+        nll-=  dpois(mY(i,j), exp(mEta(i,j)), true);
+      }
+      if(response_types(j)==3){
+        // GAUSSIAN DISTRIBUTION
+        nll -= dnorm(mY(i,j), mEta(i,j), vsigma_norm(j), true);
+      }
+      if(response_types(j)==4){
+        // LOG NORMAL DISTRIBUTION
+        nll-= dnorm(log(mY(i,j)), mEta(i,j), vsigma_norm(j), true);
       }
     }
   }
+
+  // CALCULATE AND "ADD" REGULARISATION TERMS 
   
-  matrix<Type> vl = ml.colwise().sum();
-  
-  // CALCULATE REGULARISATION TERMS 
-  Type pen = 0;
-  
-  pen -= 0.5*(vtau.array().pow(2.0)/vsigma_tau.array()).array().sum(); //  += -= *= /= incremental operators
-  pen -= 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
+  nll += 0.5*(vtau.array().pow(2.0)/vsigma_tau.array()).array().sum(); 
+  nll += 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
   
   for(int j = 0; j < m; j++){
-    pen -= 0.5*(mB.array().col(j).pow(2.0)/vsigma2_beta(j)).array().sum();
-    pen -= 0.5*(mL.array().col(j).pow(2.0)/vsigma2_lambda(j)).array().sum();
+    nll += 0.5*(mB.array().col(j).pow(2.0)/vsigma2_beta(j)).array().sum();
+    nll += 0.5*(mL.array().col(j).pow(2.0)/vsigma2_lambda(j)).array().sum();
   }
   
   for(int i = 0; i < n; i++){
-    pen -= 0.5*(mU.array().row(i).pow(2.0)).array().sum();
+    nll += 0.5*(mU.array().row(i).pow(2.0)).array().sum();
+  }
+  
+  
+  // CALCULATE AND "ADD" LOG- DETERMINANT TERM
+
+  // Create d x d identity matrix
+
+  matrix<Type> mI(d,d);
+  mI.setZero(); 
+  
+  for(int i = 0; i < d; i++){
+    for(int j = 0; j < d; j++){
+      if(i == j){
+        mI(i,j)=1.0;
+      }
+    }
   }
 
-  // COMBINE INTO OVERALL PENALISED NLL
+  // Then iterate through i and to calculate log-determinant term
 
-  Type nll = -(sum(vl) + pen); //return negative of total value (not sure if you can fn scale this? just in case - isn't too hard anyways)
+  for(int i = 0; i < n; i++){
+    matrix<Type> mVal(d,d);
+    mVal.setZero(); 
+    for(int j = 0; j < m; j++){
+      matrix<Type> lambda_j = mL.array().col(j);
+      if(response_types(j)==1){
+        // BERNOULLI DISTRIBUTION
+        Type sderiv = (exp(mEta(i,j))*((1.0 + exp(mEta(i,j))) -1.0))/( pow((1.0 + exp(mEta(i,j))), 2.0));
+        mVal += sderiv*(lambda_j*lambda_j.transpose());
+      }
+      if(response_types(j)==2){
+        // POISSON DISTRIBUTION
+        mVal += exp(mEta(i,j))*(lambda_j*lambda_j.transpose());
+      }
+      if(response_types(j)==3){
+        // GAUSSIAN DISTRIBUTION
+        mVal += (1/(pow(vsigma_norm(j),2.0)))*(lambda_j*lambda_j.transpose());
+      }
+      if(response_types(j)==4){
+        // LOGNORMAL DISTRIBUTION
+        mVal += (1/(pow(vsigma_norm(j),2.0)))*(lambda_j*lambda_j.transpose());
+      }
+    }
+    matrix<Type> mDet = mVal + mI;
+    
+    nll += 0.5*log(mDet.determinant());
+  }
+  
 
   // REPORT VALUES TO R FOR CHECKING
 
