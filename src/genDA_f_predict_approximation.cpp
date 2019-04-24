@@ -5,12 +5,12 @@ Type objective_function<Type>::operator() ()
   DATA_MATRIX(mY);
   DATA_MATRIX(mX);
   DATA_SCALAR(vsigma2_tau);
-  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal)
+  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), 4 (Log-Normal), 5(NB)
   DATA_INTEGER(d);
   DATA_MATRIX(mB); // optimised from previous TMB call
   DATA_MATRIX(mL); // optimised from previous TMB call
   DATA_MATRIX(vbeta0); //optimised from previous TMB call
-  DATA_MATRIX(vsigma_norm); //optimised from previous TMB call
+  DATA_MATRIX(vphi); //optimised from previous TMB call
   PARAMETER_MATRIX(mU);
   PARAMETER(vtau);
 
@@ -26,8 +26,7 @@ Type objective_function<Type>::operator() ()
 
   matrix<Type> oneM = mOnes.array().row(0);
   
-
- matrix<Type> mEta = vtau*oneM + vbeta0.transpose() + mX*mB +  mU*mL;
+  matrix<Type> mEta = vtau*oneM + vbeta0.transpose() + mX*mB +  mU*mL;
 
   REPORT(oneM);
   REPORT(mX);
@@ -53,11 +52,17 @@ Type objective_function<Type>::operator() ()
       }
       if(response_types(j)==3){
         // GAUSSIAN DISTRIBUTION
-        nll -= dnorm(mY(0,j), mEta(0,j), vsigma_norm(j), true);
+        nll -= dnorm(mY(0,j), mEta(0,j), vphi(j), true);
       }
       if(response_types(j)==4){
         // LOG NORMAL DISTRIBUTION
-        nll -= dnorm(log(mY(0,j)), mEta(0,j), vsigma_norm(j), true);
+        nll -= dnorm(log(mY(0,j)), mEta(0,j), vphi(j), true);
+      }
+      if(response_types(j)==5){
+        // NEGATIVE BINOMIAL DISTRIBUTION
+        Type mu = exp(mEta(0,j));
+        Type var = mu + pow(mu,2.0)/vphi(j);
+        nll-= dnbinom2(mY(0,j), mu, var, true);
       }
     }
   
@@ -102,11 +107,16 @@ Type objective_function<Type>::operator() ()
       }
       if(response_types(j)==3){
         // GAUSSIAN DISTRIBUTION
-        mVal += (1/(pow(vsigma_norm(j),2.0)))*(lambda_j*lambda_j.transpose());
+        mVal += (1/(pow(vphi(j),2.0)))*(lambda_j*lambda_j.transpose());
       }
       if(response_types(j)==4){
         // LOGNORMAL DISTRIBUTION
-        mVal += (1/(pow(vsigma_norm(j),2.0)))*(lambda_j*lambda_j.transpose());
+        mVal += (1/(pow(vphi(j),2.0)))*(lambda_j*lambda_j.transpose());
+      }
+      if(response_types(j)==5){
+        // NEGATIVE BINOMIAL DISTRIBUTION
+        Type sderiv = ((mY(i,j)+vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
+        mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
     }
     matrix<Type> mDet = mVal + mI;

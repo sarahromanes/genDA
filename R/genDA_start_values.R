@@ -1,4 +1,6 @@
 genDA_start_values<- function(mY, mX = NULL, family, d = 0) {
+  
+  set.seed(1)
 
   N <-n <- nrow(mY); 
   m <- ncol(mY); 
@@ -18,12 +20,16 @@ genDA_start_values<- function(mY, mX = NULL, family, d = 0) {
 
   if(length(family)==1 & m > 1){
     
-    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal")))
+    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial")))
       stop("Input family not supported")
     
     if(family=="log-normal"){
       family="gaussian"
       mY <- log(mY)
+    }
+    
+    if(family=="negative-binomial"){
+      family="negative.binomial"
     }
     
     if(!is.null(mX)){
@@ -51,6 +57,9 @@ genDA_start_values<- function(mY, mX = NULL, family, d = 0) {
       if(response_types[j]=="log-normal"){
         response_types[j]="gaussian"
         mY[,j] <- log(mY[,j])
+      }
+      if(response_types[j]=="negative-binomial"){
+        response_types[j]="negative.binomial"
       }
       
       if(!is.null(mX)){

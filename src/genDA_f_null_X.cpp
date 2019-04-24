@@ -3,25 +3,22 @@ template<class Type>
 Type objective_function<Type>::operator() ()
 {
   DATA_MATRIX(mY);
-  DATA_MATRIX(mX);
   DATA_VECTOR(vsigma2);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal)
   DATA_INTEGER(d);
   PARAMETER_VECTOR(log_vphi);
-  PARAMETER_MATRIX(mB);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
   PARAMETER_MATRIX(vtau);
   PARAMETER_MATRIX(vbeta0);
 
-  int n = mX.array().rows();
+  int n = mY.array().rows();
   int m = mY.array().cols();
 
   vector<Type> vphi = exp(log_vphi);
   
   Type sigma2_beta0 = vsigma2(0); // remembering that C++ starts at index 0
-  matrix<Type> vsigma2_beta = vsigma2.segment(1,m); // vector.segement(i,n) takes a Block containing n elements, starting at position i.
-  matrix<Type> vsigma2_lambda = vsigma2.segment(m+1, m); 
+  matrix<Type> vsigma2_lambda = vsigma2.segment(1, m); 
   matrix<Type> vsigma_tau = vsigma2.tail(n); // vector.tail(n) takes a Block containing the last n elements
   
   // To create lambda as matrix upper triangle
@@ -53,7 +50,7 @@ Type objective_function<Type>::operator() ()
   matrix<Type> oneM = mOnes.array().row(0);
   matrix<Type> oneN = mOnes.array().col(0);
 
-  matrix<Type> mEta = vtau*oneM + oneN*vbeta0.transpose() + mX*mB +  mU*mL;
+  matrix<Type> mEta = vtau*oneM + oneN*vbeta0.transpose() +  mU*mL;
 
     // CALCULATE LOG LIKELIHOOD
 
@@ -92,7 +89,6 @@ Type objective_function<Type>::operator() ()
   nll += 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
   
   for(int j = 0; j < m; j++){
-    nll += 0.5*(mB.array().col(j).pow(2.0)/vsigma2_beta(j)).array().sum();
     nll += 0.5*(mL.array().col(j).pow(2.0)/vsigma2_lambda(j)).array().sum();
   }
   
@@ -156,12 +152,10 @@ Type objective_function<Type>::operator() ()
 
   REPORT(mL);
   REPORT(mU);
-  REPORT(mB);
   REPORT(vtau);
   REPORT(vbeta0);
   REPORT(sigma2_beta0);
   REPORT(vsigma2_lambda);
-  REPORT(vsigma2_beta);
   REPORT(vsigma_tau);
   REPORT(mEta);
   REPORT(nll);

@@ -1,4 +1,10 @@
-genDA_predict <- function(mY_test, res_genDA, prior_beta){
+genDA_predict <- function(mY_test, res_genDA, prior_beta = c(1,1)){
+  
+  
+  mB <- res_genDA$mB
+  if(is.null(mB)){
+    stop("GLLVM not trained with class responses included. Try fitting genDA again with class information captured in mX.")
+  }
   
   n_test <- nrow(mY_test)
   p <- res_genDA$p
@@ -30,7 +36,7 @@ genDA_predict <- function(mY_test, res_genDA, prior_beta){
     data_1$mB <- res_genDA$mB
     data_1$mL <- res_genDA$mL
     data_1$vbeta0 <- as.matrix(res_genDA$vbeta0)
-    data_1$vsigma_norm <- as.matrix(res_genDA$vsigma_norm)
+    data_1$vphi <- as.matrix(res_genDA$vphi)
     
     data_0 <- data_1
     data_0$mX <-  1- data_1$mX # same parameters as before, however now vc_test[i]=0

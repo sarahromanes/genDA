@@ -1,7 +1,20 @@
 genDA <- function(mY, mX, family, d=d){
   
+  mY <- as.matrix(mY)
+  
+  if(!is.null(mX)){
+    if(is.factor(mX)){
+      l <- levels(mX)
+      mX <- as.character(mX)
+      mX[which(mX==l[1])] <-  0
+      mX[which(mX==l[2])] <-  1
+      mX <- as.matrix(as.numeric(mX))
+    }
+    
+    p <- ncol(mX)
+  }
+  
   n <- nrow(mY)
-  p <- ncol(mX)
   m <- ncol(mY)
   
   if(length(family)> 1 & m >1 & length(family)!=m){
@@ -9,7 +22,7 @@ genDA <- function(mY, mX, family, d=d){
   }
   if(length(family)==1 & m > 1){
     
-    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal")))
+    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial")))
       stop("Input family not supported")
     
     response_types <- rep(family, each=m)
@@ -26,12 +39,15 @@ genDA <- function(mY, mX, family, d=d){
     if(family=="log-normal"){
       tmb_types <- rep(4,m)
     }
+    if(family=="negative-binomial"){
+      tmb_types <- rep(5,m)
+    }
   }else{
     response_types <- family
     tmb_types <- rep(0, m)
     for(j in 1:m){
       
-      if(!(response_types[j] %in% c("poisson","binomial", "gaussian", "log-normal")))
+      if(!(response_types[j] %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial")))
         stop(paste("Variable", j, "- input family :",response_types[j],"not supported"))
       
       if(response_types[j]=="binomial"){
@@ -49,54 +65,105 @@ genDA <- function(mY, mX, family, d=d){
           stop(paste("Cannot model variable", j, "by Log-Normal - data must be strictly positive"))
         }
       }
+      if(response_types[j]=="negative-binomial"){
+        tmb_types[j] <- 5
+      }
     }
   }
   
   vbeta0.hat <- c()
-  mB.hat <- matrix(0,p,m)
-  for (j in 1:m) {
+  
+  if(!is.null(mX)){
+    mB.hat <- matrix(0,p,m)
+    for (j in 1:m) {
+      
+      if (response_types[j]=="binomial") {
+        res <- glm(mY[,j]~mX  ,family=binomial)
+      }
+      if (response_types[j]=="poisson") {
+        res <- glm(mY[,j]~mX, family=poisson)
+      }
+      if(response_types[j]=="gaussian"){
+        res <- lm(mY[,j]~mX)
+      }
+      if(response_types[j]=="log-normal"){
+        res <- lm(log(mY[,j])~mX)
+      }
+      if(response_types[j]=="negative-binomial"){
+        #res <- MASS::glm.nb(mY[,j]~mX)
+        res <- mvabund::manyglm(mY[,j]~mX, family="negative.binomial", K=1)
+      }
+      vbeta0.hat[j] <- res$coef[1]
+      mB.hat[,j] <- res$coef[-1]
+    }
     
-    if (response_types[j]=="binomial") {
-      res <- glm(mY[,j]~mX  ,family=binomial)
+    # SET RIDGE REGRESSION CONSTANTS
+    
+    sigma2_beta0	<- 1E2
+    vsigma2_beta    <- rep(1E1,m)
+    vsigma2_lambda  <- rep(1.0E0,m)
+    vsigma2_tau     <- rep(1.0E-2,n)
+    
+    vsigma2 <- c()
+    vsigma2[1]           <- sigma2_beta0
+    vsigma2[1+(1:m)]     <- vsigma2_beta
+    vsigma2[1+m+(1:m)]   <- vsigma2_lambda
+    vsigma2[1+m+m+(1:n)] <- vsigma2_tau
+    
+  } else {
+    for (j in 1:m) {
+      
+      if (response_types[j]=="binomial") {
+        res <- glm(mY[,j]~1  ,family=binomial)
+      }
+      if (response_types[j]=="poisson") {
+        res <- glm(mY[,j]~1, family=poisson)
+      }
+      if(response_types[j]=="gaussian"){
+        res <- lm(mY[,j]~1)
+      }
+      if(response_types[j]=="log-normal"){
+        res <- lm(log(mY[,j])~1)
+      }
+      if(response_types[j]=="negative-binomial"){
+        res <- mvabund::manyglm(mY[,j]~1, family="negative.binomial", K=1)
+      }
+      vbeta0.hat[j] <- res$coef[1]
+  
     }
-    if (response_types[j]=="poisson") {
-      res <- glm(mY[,j]~mX, family=poisson)
+    
+    # SET RIDGE REGRESSION CONSTANTS
+    
+    sigma2_beta0	<- 1E2
+    vsigma2_lambda  <- rep(1.0E0,m)
+    vsigma2_tau     <- rep(1.0E-2,n)
+    
+    vsigma2 <- c()
+    vsigma2[1]           <- sigma2_beta0
+    vsigma2[1+(1:m)]   <- vsigma2_lambda
+    vsigma2[1+m+(1:n)] <- vsigma2_tau
+    
     }
+  
+  ## Initialise phi's ##
+  
+  vphi <- rep(0, m)
+  for(j in 1:m){
     if(response_types[j]=="gaussian"){
-      res <- lm(mY[,j]~mX)
+      vphi[j] = sqrt(var(mY[,j]) *((n-1)/n))
     }
     if(response_types[j]=="log-normal"){
-      res <- lm(log(mY[,j])~mX)
+      vphi[j] = sqrt(var(log(mY[,j])) *((n-1)/n))
     }
-    vbeta0.hat[j] <- res$coef[1]
-    mB.hat[,j] <- res$coef[-1]
-  }
-  
-  # Set Ridge regression constants
-
-  
-  sigma2_beta0	<- 1E0
-  vsigma2_beta    <- rep(1E1,m)
-  vsigma2_lambda  <- rep(1.0E0,m)
-  vsigma2_tau     <- rep(1.0E-2,n)
-  
-  vsigma2 <- c()
-  vsigma2[1]           <- sigma2_beta0
-  vsigma2[1+(1:m)]     <- vsigma2_beta
-  vsigma2[1+m+(1:m)]   <- vsigma2_lambda
-  vsigma2[1+m+m+(1:n)] <- vsigma2_tau
-  
-  
-  vsigma_norm <- rep(0, m)
-  for(j in 1:m){
-    if(response_types[j]=="gaussian"|response_types[j]=="log-normal"){
-      vsigma_norm[j] = sqrt(var(mY[,j]) *((n-1)/n))
+    if(response_types[j]=="negative-binomial"){
+      if(!is.null(mX)){
+        vphi[j] = mvabund::manyglm(mY[,j]~mX, family="negative.binomial", K=1)$phi
+      } else {
+        vphi[j] = mvabund::manyglm(mY[,j]~1, family="negative.binomial", K=1)$phi
+      }
     }
   }
   
-  vtau.init <- rep(0,n)
-  vbeta0.init <- vbeta0.hat
-  mB.init <- mB.hat
   
   fit <-  genDA_start_values(mY, mX, family=family, d=d) 
   
@@ -109,35 +176,58 @@ genDA <- function(mY, mX, family, d=d){
   if(d > 0) lambda <- mL.init[lower.tri(mL.init,diag = TRUE)]
   
   mU.init <- fit$mU #extracts LV
+  vtau.init <- rep(0,n)
+  vbeta0.init <- vbeta0.hat
+  if(!is.null(mX)){mB.init <- mB.hat}
   
-  data <- list()
-  data$mY <- mY
-  data$mX <- mX
-  data$vsigma2 <- vsigma2
-  data$response_types <- tmb_types
-  data$d <- d
+  if(!is.null(mX)){
   
-  parameters <- list()
-  parameters$log_vsigma_norm <- as.matrix(log(vsigma_norm))
-  parameters$mB <- mB.init
-  parameters$lambda <- lambda
-  parameters$mU <- mU.init
-  parameters$vtau <- as.matrix(vtau.init)
-  parameters$vbeta0 <- as.matrix(vbeta0.init)
+    data <- list()
+    data$mY <- mY
+    data$mX <- mX
+    data$vsigma2 <- vsigma2
+    data$response_types <- tmb_types
+    data$d <- d
+    
+    parameters <- list()
+    parameters$log_vphi <- as.matrix(log(vphi))
+    parameters$mB <- mB.init
+    parameters$lambda <- lambda
+    parameters$mU <- mU.init
+    parameters$vtau <- as.matrix(vtau.init)
+    parameters$vbeta0 <- as.matrix(vbeta0.init)
+    
+    obj = MakeADFun(data,parameters,DLL = "genDA_f", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
+  } else {
+    
+    data <- list()
+    data$mY <- mY
+    data$vsigma2 <- vsigma2
+    data$response_types <- tmb_types
+    data$d <- d
+    
+    parameters <- list()
+    parameters$log_vphi <- as.matrix(log(vphi))
+    parameters$lambda <- lambda
+    parameters$mU <- mU.init
+    parameters$vtau <- as.matrix(vtau.init)
+    parameters$vbeta0 <- as.matrix(vbeta0.init)
+    
+    obj = MakeADFun(data,parameters,DLL = "genDA_f_null_X", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
+    
+  }
   
+  opt = nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
   
-  obj = MakeADFun(data,parameters,DLL = "genDA_f", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
-  opt1 = nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
-  
-  param <- opt1$par
+  param <- opt$par
   li <- names(param)=="lambda"
   ui <- names(param)=="mU"
-  bi <- names(param)=="mB"
   b0i <- names(param)=="vbeta0"
   ti <- names(param)=="vtau"
-  vj <- names(param)=="log_vsigma_norm"
+  vj <- names(param)=="log_vphi"
+  if(!is.null(mX)){bi <- names(param)=="mB"}
   
-  val <- -1*opt1$objective
+  val <- -1*opt$objective
   
   if(d > 0){
     mU.hat<-(matrix(param[ui],n,d))
@@ -148,18 +238,31 @@ genDA <- function(mY, mX, family, d=d){
     
   }
   
-  mB.hat <- t(matrix(nrow=m,ncol=p, param[bi]))
-  colnames(mB.hat) <- colnames(mY)
-  vtau.hat <- param[ti]
-  vbeta0.hat <- opt1$par[b0i]
-  
-  inds <- which(response_types %in% c("gaussian", "log-normal"))
-  if(length(inds)>0){
-    vsigma_norm.hat <- rep(0,m)
-    vsigma_norm.hat[inds] <- exp(opt1$par[vj][inds])
+  if(!is.null(mX)){
+    mB.hat <- t(matrix(nrow=m,ncol=p, param[bi]))
+    colnames(mB.hat) <- colnames(mY)
   }
   
-  mEta.hat <- matrix(vtau.hat)%*%matrix(1,1,m) + matrix(1,n,1)%*%vbeta0.hat + mX%*%mB.hat + mU.hat%*%t(theta)
+  vtau.hat <- param[ti]
+  vbeta0.hat <- opt$par[b0i]
+  
+  inds <- which(response_types %in% c("gaussian", "log-normal", "negative-binomial"))
+  if(length(inds)>0){
+    vphi.hat <- rep(0,m)
+    vphi.hat[inds] <- exp(opt$par[vj][inds])
+  }
+  
+  if(!is.null(mX)){
+    mEta.hat <- matrix(vtau.hat)%*%matrix(1,1,m) + matrix(1,n,1)%*%vbeta0.hat + mX%*%mB.hat + mU.hat%*%t(theta)
+  } else {
+    mEta.hat <- matrix(vtau.hat)%*%matrix(1,1,m) + matrix(1,n,1)%*%vbeta0.hat  + mU.hat%*%t(theta)
+  } 
+  
+  if(is.null(mX)){
+    mB.hat <-  NULL
+    p <-  0
+    vc <- NULL
+  }
   
   return(list(mB = mB.hat, 
               mL = t(theta), 
@@ -172,7 +275,7 @@ genDA <- function(mY, mX, family, d=d){
               n = n,
               vtau = vtau.hat,
               vbeta0 = vbeta0.hat,
-              vsigma_norm.hat = vsigma_norm,
+              vphi = vphi.hat,
               mU = mU.hat, 
               mEta = mEta.hat))
   
