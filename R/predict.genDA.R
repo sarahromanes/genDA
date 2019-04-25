@@ -37,10 +37,10 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
   }
   
   n_test <- nrow(new.y)
-  p <- object$predict.params$p
+  p <- object$predict.values$p
   m <- ncol(new.y)
-  d <- object$predict.params$d
-  n_train <- object$predict.params$n
+  d <- object$predict.values$d
+  n_train <- object$predict.values$n
   
   A <- prior_beta[1]
   B <- prior_beta[2]
