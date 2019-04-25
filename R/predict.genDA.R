@@ -31,7 +31,7 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
     stop("object not of class 'genDA'")
   }
   
-  vc <- object$predict.params$vc
+  vc <- object$predict.values$vc
   if(is.null(vc)){
     stop("GLLVM not trained with class responses included. Try fitting genDA again with class information captured 'class'.")
   }
