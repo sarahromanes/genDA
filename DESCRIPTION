@@ -1,0 +1,18 @@
+Package: genDA
+Type: Package
+Title: Multi-distributional Discriminant Analysis using Generalised Linear Latent Variable Modelling
+Version: 1.1.3
+Author: Sarah Romanes, John Ormerod
+Maintainer: Sarah Romanes <sarah.romanes@sydney.edu.au>
+Description: genDA is a Discriminant Analysis (DA) algorithm capable for use in multi-distributional response data - generalising the capabilities of DA beyond Gaussian response. 
+      It utilises Generalised Linear Latent Variable Models (GLLVMs) to capture the covariance structure between the different response types and provide an efficient classifier for such datasets. 
+      This package leverages the highly resourcful TMB package for fast and accurate gradient calculation in C++.
+License: GPL-2
+Imports: mvtnorm, matrixStats
+Depends: TMB, mvabund, RcppEigen
+Encoding: UTF-8
+LazyData: true
+LinkingTo: TMB, RcppEigen
+RoxygenNote: 6.1.1
+NeedsCompilation: yes
+URL: https://github.com/sarahromanes/genDA.git

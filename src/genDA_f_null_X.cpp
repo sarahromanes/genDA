@@ -2,7 +2,7 @@
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
-  DATA_MATRIX(mY);
+  DATA_MATRIX(y);
   DATA_VECTOR(vsigma2);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal)
   DATA_INTEGER(d);
@@ -12,8 +12,8 @@ Type objective_function<Type>::operator() ()
   PARAMETER_MATRIX(vtau);
   PARAMETER_MATRIX(vbeta0);
 
-  int n = mY.array().rows();
-  int m = mY.array().cols();
+  int n = y.array().rows();
+  int m = y.array().cols();
 
   vector<Type> vphi = exp(log_vphi);
   
@@ -60,25 +60,25 @@ Type objective_function<Type>::operator() ()
     for(int j = 0; j < m; j++){
       if(response_types(j)==1){ 
         // BERNOULLI DISTRIBUTION
-        nll -= mY(i,j)*mEta(i,j) - log(1 + exp(mEta(i,j)));
+        nll -= y(i,j)*mEta(i,j) - log(1 + exp(mEta(i,j)));
       }
       if(response_types(j)==2){
         // POISSON DISTRIBUTION
-        nll-=  dpois(mY(i,j), exp(mEta(i,j)), true);
+        nll-=  dpois(y(i,j), exp(mEta(i,j)), true);
       }
       if(response_types(j)==3){
         // GAUSSIAN DISTRIBUTION
-        nll -= dnorm(mY(i,j), mEta(i,j), vphi(j), true);
+        nll -= dnorm(y(i,j), mEta(i,j), vphi(j), true);
       }
       if(response_types(j)==4){
         // LOG NORMAL DISTRIBUTION
-        nll-= dnorm(log(mY(i,j)), mEta(i,j), vphi(j), true);
+        nll-= dnorm(log(y(i,j)), mEta(i,j), vphi(j), true);
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
         Type mu = exp(mEta(i,j));
         Type var = mu + pow(mu,2.0)/vphi(j);
-        nll-= dnbinom2(mY(i,j), mu, var, true);
+        nll-= dnbinom2(y(i,j), mu, var, true);
       }
     }
   }
@@ -138,7 +138,7 @@ Type objective_function<Type>::operator() ()
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
-        Type sderiv = ((mY(i,j)+vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
+        Type sderiv = ((y(i,j)+vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
     }

@@ -15,7 +15,9 @@ Installation
 --------
 
 ```r
-# --- Coming Soon ! ---
+# Install the development version from GitHub:
+# install.packages("devtools")
+devtools::install_github("sarahromanes/genDA")
 
 ```
 
@@ -26,9 +28,10 @@ Installation
 
 ## License
 
-This project is licensed under the GPL-2 license - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the GPL-2 license.
 
 
 ## Acknowledgements
 
-I am grateful to everyone who has provided thoughtful and helpful comments to support me in this project - especially Mark Greenaway for C++ implementation!
+* I am grateful to everyone who has provided thoughtful and helpful comments to support me in this project - especially Mark Greenaway for C++ implementation!
+* James Campbell for his incredibly valuable [post](https://rtbecard.gitlab.io/2018/02/11/Distributing-TMB-in-R-packages.html) describing how to compile an R package distributing multiple TMB scripts.

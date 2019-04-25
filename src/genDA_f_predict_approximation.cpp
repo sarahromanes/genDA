@@ -2,8 +2,8 @@
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
-  DATA_MATRIX(mY);
-  DATA_MATRIX(mX);
+  DATA_MATRIX(y);
+  DATA_MATRIX(X);
   DATA_SCALAR(vsigma2_tau);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), 4 (Log-Normal), 5(NB)
   DATA_INTEGER(d);
@@ -15,7 +15,7 @@ Type objective_function<Type>::operator() ()
   PARAMETER(vtau);
 
   int n = 1 ;
-  int m = mY.array().cols();
+  int m = y.array().cols();
 
   matrix<Type> mOnes(n,m); // create a matrix of ones, and then extract a row and column below to get mOnes (length m, and n) below
   for(int i =0; i < n; i++){
@@ -26,13 +26,13 @@ Type objective_function<Type>::operator() ()
 
   matrix<Type> oneM = mOnes.array().row(0);
   
-  matrix<Type> mEta = vtau*oneM + vbeta0.transpose() + mX*mB +  mU*mL;
+  matrix<Type> mEta = vtau*oneM + vbeta0.transpose() + X*mB +  mU*mL;
 
   REPORT(oneM);
-  REPORT(mX);
+  REPORT(X);
   REPORT(mB);
   REPORT(mU);
-  REPORT(mY);
+  REPORT(y);
   REPORT(vtau);
   REPORT(vbeta0);
 
@@ -44,25 +44,25 @@ Type objective_function<Type>::operator() ()
     for(int j = 0; j < m; j++){
       if(response_types(j)==1){ 
         // BERNOULLI DISTRIBUTION
-        nll -= mY(0,j)*mEta(0,j) - log(1 + exp(mEta(0,j)));
+        nll -= y(0,j)*mEta(0,j) - log(1 + exp(mEta(0,j)));
       }
       if(response_types(j)==2){
         // POISSON DISTRIBUTION
-        nll-=  dpois(mY(0,j), exp(mEta(0,j)), true);
+        nll-=  dpois(y(0,j), exp(mEta(0,j)), true);
       }
       if(response_types(j)==3){
         // GAUSSIAN DISTRIBUTION
-        nll -= dnorm(mY(0,j), mEta(0,j), vphi(j), true);
+        nll -= dnorm(y(0,j), mEta(0,j), vphi(j), true);
       }
       if(response_types(j)==4){
         // LOG NORMAL DISTRIBUTION
-        nll -= dnorm(log(mY(0,j)), mEta(0,j), vphi(j), true);
+        nll -= dnorm(log(y(0,j)), mEta(0,j), vphi(j), true);
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
         Type mu = exp(mEta(0,j));
         Type var = mu + pow(mu,2.0)/vphi(j);
-        nll-= dnbinom2(mY(0,j), mu, var, true);
+        nll-= dnbinom2(y(0,j), mu, var, true);
       }
     }
   
@@ -115,7 +115,7 @@ Type objective_function<Type>::operator() ()
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
-        Type sderiv = ((mY(i,j)+vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
+        Type sderiv = ((y(i,j)+vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
     }

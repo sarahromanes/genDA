@@ -1,0 +1,11 @@
+all: genDA_f.dll genDA_f_null_X.dll genDA_f_predict_approximation.dll
+	# Comment here preserves the prior tab
+genDA_f.dll: genDA_f.cpp
+	Rscript --vanilla -e "TMB::compile('genDA_f.cpp', '-O1 -g',DLLFLAGS='')"
+genDA_f_null_X.dll: genDA_f_null_X.cpp
+	Rscript --vanilla -e "TMB::compile('genDA_f_null_X.cpp', '-O1 -g',DLLFLAGS='')"
+genDA_f_predict_approximation.dll: genDA_f_predict_approximation.cpp
+	Rscript --vanilla -e "TMB::compile('genDA_f_predict_approximation.cpp', '-O1 -g',DLLFLAGS='')"
+
+clean:
+	rm -rf *.dll
