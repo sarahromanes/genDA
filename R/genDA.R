@@ -307,10 +307,11 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   predict.values$n <- n
   predict.values$d <- d
   
-  object <- list(logL <- val, 
-                 lvs <- mU.hat,
-                 params <- params,
-                 predict.values <- predict.values)
+  object <- list()
+  object$logL <- val 
+  object$lvs <- mU.hat
+  object$params <- params
+  object$predict.values <- predict.values
   
   class(object) <- "genDA"
   
