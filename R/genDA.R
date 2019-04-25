@@ -271,8 +271,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   vbeta0.hat <- opt$par[b0i]
   
   inds <- which(response_types %in% c("gaussian", "log-normal", "negative-binomial"))
+  vphi.hat <- rep(0,m)
   if(length(inds)>0){
-    vphi.hat <- rep(0,m)
     vphi.hat[inds] <- exp(opt$par[vj][inds])
   }
   
