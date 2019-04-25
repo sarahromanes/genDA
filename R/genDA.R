@@ -1,8 +1,9 @@
 #' @title genDA: Multi-distributional Discriminant Analysis using Generalised Linear Latent Variable Modelling
 #' @description Fits a genDA model for multivariate data through generalised linear latent variable modelling.
 #'
-#' @param y (n x m) matrix of responses.
-#' @param X vector of class information.
+#' @param y (n x m) matrix or data.frame of responses.
+#' @param X matrix or data.frame of covariates
+#' @param class numeric or factor of class information.
 #' @param d  number of latent variables, d, in gllvm model. Non-negative integer, less than number of response variables (m). Defaults to 2.
 #' @param family  distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{poisson(link = "log")}, \code{"negative-binomial"} (with log link), \code{binomial(link = "logit")}, \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.
 #' 
@@ -32,7 +33,7 @@
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom matrixStats colMeans2
 #' 
-genDA <- function(y, X, class, family, d=2){
+genDA <- function(y, X = NULL, class = NULL, family, d=2){
   
   y <- as.matrix(y)
   

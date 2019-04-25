@@ -4,12 +4,14 @@
 \alias{genDA}
 \title{genDA: Multi-distributional Discriminant Analysis using Generalised Linear Latent Variable Modelling}
 \usage{
-genDA(y, X, class, family, d = 2)
+genDA(y, X = NULL, class = NULL, family, d = 2)
 }
 \arguments{
-\item{y}{(n x m) matrix of responses.}
+\item{y}{(n x m) matrix or data.frame of responses.}
 
-\item{X}{vector of class information.}
+\item{X}{matrix or data.frame of covariates}
+
+\item{class}{numeric or factor of class information.}
 
 \item{family}{distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{poisson(link = "log")}, \code{"negative-binomial"} (with log link), \code{binomial(link = "logit")}, \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.}
 
