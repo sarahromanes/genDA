@@ -22,7 +22,10 @@
 predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
   
   new.y <- as.matrix(new.y)
-  newX <-  as.matrix(newX)
+  
+  if(!is.null(newX)){
+    newX <-  as.matrix(newX)
+  }
   
   if (!inherits(object, "genDA"))  {
     stop("object not of class 'genDA'")
