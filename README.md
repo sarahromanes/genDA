@@ -6,7 +6,7 @@ Multi-distributional Discriminant Analysis using Generalised Linear Latent Varia
 Overview
 --------
 
-**genDA** is a Discriminant Analysis (DA) algorithm capable for use in multi-distributional response data - generalising the capabilities of DA beyond Gaussian response. It utilises *Generalised Linear Latent Variable Models (GLLVMs)* to capture the covariance structure between the different response types and provide an efficient classifier for such datasets. This package leverages the highly resourecful [TMB](https://github.com/kaskr/adcomp/wiki) package for fast and accurate gradient calculation in `C++`.
+**genDA** is a Discriminant Analysis (DA) algorithm capable for use in multi-distributional response data - generalising the capabilities of DA beyond Gaussian response. It utilises *Generalised Linear Latent Variable Models (GLLVMs)* to capture the covariance structure between the different response types and provide an efficient classifier for such datasets. This package leverages the highly resourceful [TMB](https://github.com/kaskr/adcomp/wiki) package for fast and accurate gradient calculation in `C++`.
 
 This package is part of a suite of discriminant analysis packages we have authored for large-scale/complex datasets. See also our package [multiDA](https://github.com/sarahromanes/multiDA), a statistical ML method for high dimensional, Gaussian data, with feature selection.
 
