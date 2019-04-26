@@ -9,7 +9,6 @@ warnings_are_errors: false
 install:
     - sudo apt-get install libgsl0-dev
     - Rscript -e 'install.packages("RcppEigen", dependencies = TRUE)'
-    - Rscript -e 'install.packages("RcppGSL", dependencies = TRUE)'
     - Rscript -e 'install.packages("mvabund", dependencies = TRUE)'
     - Rscript -e 'install.packages("TMB", dependencies = TRUE)'
     - Rscript -e 'install.packages("matrixStats", dependencies = TRUE)'
