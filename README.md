@@ -2,6 +2,7 @@ genDA <img src="man/figures/genDA_logo.png" align="right"  height="250" width="2
 ======================================================
 
 Multi-distributional Discriminant Analysis using Generalised Linear Latent Variable Modelling
+[![Build Status](https://travis-ci.org/sarahromanes/genDA.svg?branch=master)](https://travis-ci.org/sarahromanes/genDA)
 
 Overview
 --------
@@ -34,4 +35,4 @@ This project is licensed under the GPL-2 license.
 ## Acknowledgements
 
 * I am grateful to everyone who has provided thoughtful and helpful comments to support me in this project - especially Mark Greenaway for C++ implementation!
-* James Campbell for his incredibly valuable [post](https://rtbecard.gitlab.io/2018/02/11/Distributing-TMB-in-R-packages.html) describing how to compile an R package distributing multiple TMB scripts.
+

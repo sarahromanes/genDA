@@ -57,6 +57,7 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
   for(i in 1:n_test){
     
     data_1 <- list()
+    data_1$model_name = "genDA_f_predict"
     data_1$y <- t(as.matrix(new.y[i, ]))
     data_1$X <- t(as.matrix(c(1, newX[i, ]))) #setting vc_test[i] = 1
     data_1$vsigma2_tau <- vsigma2_tau[i]
@@ -75,8 +76,8 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
     parameters$vtau <- vtau.init[i]
     
     
-    obj_1 <- MakeADFun(data_1,parameters,DLL = "genDA_f_predict_approximation", silent=TRUE)
-    obj_0 <-  MakeADFun(data_0,parameters,DLL = "genDA_f_predict_approximation", silent=TRUE)
+    obj_1 <- MakeADFun(data_1,parameters,DLL = "genDA", silent=TRUE)
+    obj_0 <-  MakeADFun(data_0,parameters,DLL = "genDA", silent=TRUE)
     opt_1 <-  nlminb(obj_1$par,obj_1$fn, obj_1$gr,control=list(rel.tol=1.0E-6))
     opt_0 <- nlminb(obj_0$par,obj_0$fn, obj_0$gr,control=list(rel.tol=1.0E-6))
     
