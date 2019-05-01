@@ -221,6 +221,7 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   if(!is.null(X)){mB.init <- mB.hat}
   
   data <- list()
+  if(!is.null(X)){data$model_name="genDA_f"} else {data$model_name = "genDA_f_null_X"}
   data$y <- y
   if(!is.null(X)){data$X <- X}
   data$vsigma2 <- vsigma2
@@ -235,11 +236,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   parameters$vtau <- as.matrix(vtau.init)
   parameters$vbeta0 <- as.matrix(vbeta0.init)
     
-  if(!is.null(X)){
-    obj = MakeADFun(data,parameters,DLL = "genDA_f", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
-  } else {
-    obj = MakeADFun(data,parameters,DLL = "genDA_f_null_X", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
-  }
+  obj = MakeADFun(data,parameters,DLL = "genDA", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
+   
     
   opt = nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
   
