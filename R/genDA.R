@@ -9,7 +9,8 @@
 #' 
 #' 
 #' @return An object of class "genDA" includes the following components:
-#'
+#' 
+#'  \item{call }{function call}
 #'  \item{logL }{log likelihood}
 #'  \item{lvs }{latent variables}
 #'  \item{params}{list of parameters
@@ -306,6 +307,7 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   predict.values$d <- d
   
   object <- list()
+  object$call <- match.call()
   object$logL <- val 
   object$lvs <- mU.hat
   object$params <- params
