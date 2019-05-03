@@ -1,4 +1,4 @@
-genDA [![Build Status](https://travis-ci.org/sarahromanes/genDA.svg?branch=master)](https://travis-ci.org/sarahromanes/genDA)  <img src="man/figures/genDA_logo.png" align="right"  height="250" width="250"/>
+genDA [![Build Status](https://travis-ci.org/sarahromanes/genDA.svg?branch=master)](https://travis-ci.org/sarahromanes/genDA) http://www.r-pkg.org/badges/version/{genDA} <img src="man/figures/genDA_logo.png" align="right"  height="250" width="250"/>
 ======================================================
 
 Multi-distributional Discriminant Analysis using Generalised Linear Latent Variable Modelling
