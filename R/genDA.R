@@ -6,7 +6,7 @@
 #' @param class numeric or factor of class information.
 #' @param d  number of latent variables, d, in gllvm model. Non-negative integer, less than number of response variables (m). Defaults to 2.
 #' @param family  distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{poisson(link = "log")}, \code{"negative-binomial"} (with log link), \code{binomial(link = "logit")}, \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.
-#' 
+#' @param standard.errors logical. If \code{TRUE} (default is \code{FALSE}) standard errors for parameter estimates are calculated
 #' 
 #' @return An object of class "genDA" includes the following components:
 #' 
@@ -22,7 +22,8 @@
 #'    \item{vphi }{ dispersion parameters \eqn{\phi} for negative binomial, Gaussian, or log-normal family columns. 0 for columns not belonging to these families}
 #'    \item{mEta } calculated value of \eqn{\eta} with estimated coefficients above.
 #'    }}
-#'  \item{predict.values}{list of additional parameters necessary to be passed onto to the predict.genDA method}
+#'  \item{sd } standard errors of parameters
+#'  \item{predict.values }{list of additional parameters necessary to be passed onto to the predict.genDA method}
 
 #'
 #' @author Sarah Romanes <sarah.romanes@@sydney.edu.au>, John Ormerod
@@ -34,9 +35,17 @@
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom matrixStats colMeans2
 #' 
-genDA <- function(y, X = NULL, class = NULL, family, d=2){
+genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALSE){
   
   y <- as.matrix(y)
+  
+  if(is.null(colnames(y))){
+    colnames(y)<-paste("V",1:ncol(y), sep="")
+  }else{
+    colnames(y)<-make.unique(colnames(y))
+  }
+  
+  labels <- colnames(y)
   
   if(!is.null(class)){
     if(is.factor(class)){
@@ -189,22 +198,27 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   ## Initialise phi's ##
   
   vphi <- rep(0, m)
+  label_phi <- vphi
   for(j in 1:m){
     if(response_types[j]=="gaussian"){
-      vphi[j] = sqrt(var(y[,j]) *((n-1)/n))
+      vphi[j] <-  sqrt(var(y[,j]) *((n-1)/n))
+      label_phi[j] <-  1 
     }
     if(response_types[j]=="log-normal"){
-      vphi[j] = sqrt(var(log(y[,j])) *((n-1)/n))
+      vphi[j] <-  sqrt(var(log(y[,j])) *((n-1)/n))
+      label_phi[j] <-  1
     }
     if(response_types[j]=="negative-binomial"){
       if(!is.null(X)){
-        vphi[j] = mvabund::manyglm(y[,j]~X, family="negative.binomial", K=1)$phi
+        vphi[j] <-  mvabund::manyglm(y[,j]~X, family="negative.binomial", K=1)$phi
       } else {
-        vphi[j] = mvabund::manyglm(y[,j]~1, family="negative.binomial", K=1)$phi
+        vphi[j] <-  mvabund::manyglm(y[,j]~1, family="negative.binomial", K=1)$phi
       }
+      
+      label_phi[j] <- 1
     }
   }
-  
+
   
   fit <-  .genDA_start_values(y, X, family=family, d=d) 
   
@@ -237,10 +251,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   parameters$vtau <- as.matrix(vtau.init)
   parameters$vbeta0 <- as.matrix(vbeta0.init)
     
-  obj = MakeADFun(data,parameters,DLL = "genDA", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
-   
-    
-  opt = nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
+  obj <-  MakeADFun(data,parameters,DLL = "genDA", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
+  opt <-  nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
   
   param <- opt$par
   li <- names(param)=="lambda"
@@ -252,34 +264,59 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   
   val <- -1*opt$objective
   
+  
   if(d > 0){
     mU.hat<-(matrix(param[ui],n,d))
     theta <- matrix(0,m,d)
     if(m>1) {
-      theta[lower.tri(theta,diag=TRUE)] <- param[li];
+      theta[lower.tri(theta,diag=TRUE)] <- param[li]
+      rownames(theta) <- labels
     } else {theta <- param[li]}
-    
+    colnames(theta)<-paste(rep("LV",ncol(theta)),c(1:ncol(theta)),sep="")
+    colnames(mU.hat) <- colnames(theta)
   }
   
   if(!is.null(X)){
     mB.hat <- t(matrix(nrow=m,ncol=p, param[bi]))
-    colnames(mB.hat) <- colnames(y)
+    colnames(mB.hat) <- labels
   }
   
   vtau.hat <- param[ti]
-  vbeta0.hat <- opt$par[b0i]
+  vbeta0.hat <- opt$par[b0i]; names(vbeta0.hat) <- labels
   
-  inds <- which(response_types %in% c("gaussian", "log-normal", "negative-binomial"))
+  
   vphi.hat <- rep(0,m)
-  if(length(inds)>0){
-    vphi.hat[inds] <- exp(opt$par[vj][inds])
+  if(length(which(label_phi==1))>0){
+    vphi.hat[which(label_phi==1)] <- exp(opt$par[vj][which(label_phi==1)])
   }
+  names(vphi.hat) <- labels
   
   if(!is.null(X)){
     mEta.hat <- matrix(vtau.hat)%*%matrix(1,1,m) + matrix(1,n,1)%*%vbeta0.hat + X%*%mB.hat + mU.hat%*%t(theta)
   } else {
     mEta.hat <- matrix(vtau.hat)%*%matrix(1,1,m) + matrix(1,n,1)%*%vbeta0.hat  + mU.hat%*%t(theta)
   } 
+  
+  
+  if(standard.errors==TRUE){
+    sds <- obj$he()
+    if(length(unique(response_types %in% c("negative-binomial", "gaussian", "log-normal")))==1){
+      cov.mat <- solve(sds)
+      ses <- sqrt(diag(abs(cov.mat)))
+      names(ses) <- names(param)
+      if(all(response_types %in% c("negative-binomial", "gaussian", "log-normal"))){
+        ses[names(ses)=="log_vphi"] =  vphi.hat*ses[names(ses)=="log_vphi"]
+        names(ses)[which(names(ses)=="log_vphi")] <- "vphi"
+      }
+    } else {
+      inds <- which(label_phi!=1)
+      cov.mat <- solve(sds[-inds, -inds])
+      ses <- sqrt(diag(abs(cov.mat)))
+      ses[which(label_phi==1)] =  vphi.hat[which(label_phi==1)]*ses[ vphi.hat[which(label_phi==1)]]
+      names(ses) <- names(param[-inds])
+      names(ses)[inds] <- "vphi"
+    }
+  }
   
   if(is.null(X)){
     mB.hat <-  NULL
@@ -311,6 +348,7 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2){
   object$logL <- val 
   object$lvs <- mU.hat
   object$params <- params
+  if(standard.errors==TRUE) {object$sd <- ses} else {object$sd <-NULL} 
   object$predict.values <- predict.values
   
   class(object) <- "genDA"
