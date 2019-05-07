@@ -1,6 +1,7 @@
 #' @title Predict Method for genDA
 #' @description Obtains new class predictions from a fitted genDA object.
 #'
+#' @export
 #' @param object an object of class 'genDA'.
 #' @param new.y A new data frame or matrix of response data. Must be numeric. Column response (family) types will be assumed to match that of the trained genDA object.
 #' @param newX A new data frame or matrix of known covariate data.
@@ -12,12 +13,8 @@
 #'  \item{class }{a vector of predicted class labels}
 #'  \item{prob_class }{a matrix of class membership probabilities}
 #'  
-#' @author Sarah Romanes <sarah.romanes@@sydney.edu.au>
-#' 
-#' @aliases predict predict.genDA
-#' @method predict genDA
 #' @export
-#' @export predict.genDA
+
 
 predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
   
@@ -31,16 +28,16 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
     stop("object not of class 'genDA'")
   }
   
-  vc <- object$predict.values$vc
+  vc <- object$side.list$vc
   if(is.null(vc)){
     stop("GLLVM not trained with class responses included. Try fitting genDA again with class information captured 'class'.")
   }
   
   n_test <- nrow(new.y)
-  p <- object$predict.values$p
+  p <- object$side.list$p
   m <- ncol(new.y)
-  d <- object$predict.values$d
-  n_train <- object$predict.values$n
+  d <- object$side.list$d
+  n_train <- object$side.list$n
   
   A <- prior_beta[1]
   B <- prior_beta[2]
@@ -61,7 +58,7 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
     data_1$y <- t(as.matrix(new.y[i, ]))
     data_1$X <- t(as.matrix(c(1, newX[i, ]))) #setting vc_test[i] = 1
     data_1$vsigma2_tau <- vsigma2_tau[i]
-    data_1$response_types <- object$predict.values$tmb_types
+    data_1$response_types <- object$side.list$tmb_types
     data_1$d <- d
     data_1$mB <- object$params$mB
     data_1$mL <- object$params$mL
@@ -81,8 +78,8 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
     opt_1 <-  nlminb(obj_1$par,obj_1$fn, obj_1$gr,control=list(rel.tol=1.0E-6))
     opt_0 <- nlminb(obj_0$par,obj_0$fn, obj_0$gr,control=list(rel.tol=1.0E-6))
     
-    ll_1 <- -1*(opt_1$objective) +  lbeta(A + sum(object$predict.values$vc) + 1, B + n_train - sum(object$predict.values$vc) -1) 
-    ll_0 <- -1*(opt_0$objective) +  lbeta(A + sum(object$predict.values$vc), B + n_train - sum(object$predict.values$vc)) 
+    ll_1 <- -1*(opt_1$objective) +  lbeta(A + sum(object$side.list$vc) + 1, B + n_train - sum(object$side.list$vc) -1) 
+    ll_0 <- -1*(opt_0$objective) +  lbeta(A + sum(object$side.list$vc), B + n_train - sum(object$side.list$vc)) 
     
     if(ll_1 > ll_0 ){
       class[i] = 1

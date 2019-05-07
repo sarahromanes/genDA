@@ -2,7 +2,6 @@
 % Please edit documentation in R/predict.genDA.R
 \name{predict.genDA}
 \alias{predict.genDA}
-\alias{predict}
 \title{Predict Method for genDA}
 \usage{
 \method{predict}{genDA}(object, new.y, newX = NULL, prior_beta = c(1,
@@ -27,7 +26,4 @@ An object including the following components:
 }
 \description{
 Obtains new class predictions from a fitted genDA object.
-}
-\author{
-Sarah Romanes <sarah.romanes@sydney.edu.au>
 }
