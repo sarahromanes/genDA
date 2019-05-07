@@ -36,7 +36,7 @@ An object of class "genDA" includes the following components:
    \item{mEta } calculated value of \eqn{\eta} with estimated coefficients above.
    }}
  \item{sd } standard errors of parameters
- \item{predict.values }{list of additional parameters necessary to be passed onto to the predict.genDA method}
+ \item{side.list }{list of additional parameters necessary to be passed onto to the predict.genDA method}
 }
 \description{
 Fits a genDA model for multivariate data through generalised linear latent variable modelling.

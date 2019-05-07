@@ -5,7 +5,7 @@
 #' @param ... Any other variables which will be ignored.
 #' @export
 #'
-print.multiDA <- function(object,...) {
+print.genDA <- function(object,...) {
   
   if (!inherits(object, "genDA"))  {
     stop("object not of class 'genDA'")
@@ -16,4 +16,5 @@ print.multiDA <- function(object,...) {
  
  cat("log-likelihood: \n")
  print(object$logL)
+ 
 }
