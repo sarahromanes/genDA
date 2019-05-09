@@ -9,9 +9,14 @@ Type genDA_f(objective_function<Type>* obj) {
 
   DATA_MATRIX(y);
   DATA_MATRIX(X);
-  DATA_VECTOR(vsigma2);
+  DATA_SCALAR(sigma2_beta0);
+  DATA_VECTOR(vsigma2_beta);
+  DATA_VECTOR(vsigma2_lambda);
+  DATA_VECTOR(vsigma2_tau);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal), or 5 (NB)
   DATA_INTEGER(d);
+  DATA_IVECTOR(vphi_inds);
+  
   PARAMETER_VECTOR(log_vphi);
   PARAMETER_MATRIX(mB);
   PARAMETER_VECTOR(lambda);
@@ -19,16 +24,11 @@ Type genDA_f(objective_function<Type>* obj) {
   PARAMETER_MATRIX(vtau);
   PARAMETER_MATRIX(vbeta0);
 
-  int n = X.array().rows();
+  int n = y.array().rows();
   int m = y.array().cols();
 
   vector<Type> vphi = exp(log_vphi);
-  
-  Type sigma2_beta0 = vsigma2(0); // remembering that C++ starts at index 0
-  matrix<Type> vsigma2_beta = vsigma2.segment(1,m); // vector.segement(i,n) takes a Block containing n elements, starting at position i.
-  matrix<Type> vsigma2_lambda = vsigma2.segment(m+1, m); 
-  matrix<Type> vsigma_tau = vsigma2.tail(n); // vector.tail(n) takes a Block containing the last n elements
-  
+    
   // To create lambda as matrix upper triangle
 
   matrix<Type> mL(d,m);
@@ -76,16 +76,16 @@ Type genDA_f(objective_function<Type>* obj) {
       }
       if(response_types(j)==3){
         // GAUSSIAN DISTRIBUTION
-        nll -= dnorm(y(i,j), mEta(i,j), vphi(j), true);
+        nll -= dnorm(y(i,j), mEta(i,j), vphi(vphi_inds(j)), true);
       }
       if(response_types(j)==4){
         // LOG NORMAL DISTRIBUTION
-        nll-= dnorm(log(y(i,j)), mEta(i,j), vphi(j), true);
+        nll-= dnorm(log(y(i,j)), mEta(i,j), vphi(vphi_inds(j)), true);
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
         Type mu = exp(mEta(i,j));
-        Type var = mu + pow(mu,2.0)/vphi(j);
+        Type var = mu + pow(mu,2.0)/vphi(vphi_inds(j));
         nll-= dnbinom2(y(i,j), mu, var, true);
       }
     }
@@ -93,7 +93,7 @@ Type genDA_f(objective_function<Type>* obj) {
 
   // CALCULATE AND "ADD" REGULARISATION TERMS 
   
-  nll += 0.5*(vtau.array().pow(2.0)/vsigma_tau.array()).array().sum(); 
+  nll += 0.5*(vtau.array().pow(2.0)/vsigma2_tau.array()).array().sum(); 
   nll += 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
   
   for(int j = 0; j < m; j++){
@@ -139,15 +139,15 @@ Type genDA_f(objective_function<Type>* obj) {
       }
       if(response_types(j)==3){
         // GAUSSIAN DISTRIBUTION
-        mVal += (1/(pow(vphi(j),2.0)))*(lambda_j*lambda_j.transpose());
+        mVal += (1/(pow(vphi(vphi_inds(j)),2.0)))*(lambda_j*lambda_j.transpose());
       }
       if(response_types(j)==4){
         // LOGNORMAL DISTRIBUTION
-        mVal += (1/(pow(vphi(j),2.0)))*(lambda_j*lambda_j.transpose());
+        mVal += (1/(pow(vphi(vphi_inds(j)),2.0)))*(lambda_j*lambda_j.transpose());
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
-        Type sderiv = ((y(i,j)+vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
+        Type sderiv = ((y(i,j)+vphi(vphi_inds(j)))*(vphi(vphi_inds(j))*exp(mEta(i,j)))/pow(vphi(vphi_inds(j)) + exp(mEta(i,j)),2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
     }
@@ -156,21 +156,6 @@ Type genDA_f(objective_function<Type>* obj) {
     nll += 0.5*log(mDet.determinant());
   }
   
-
-  // REPORT VALUES TO R FOR CHECKING
-
-  REPORT(mL);
-  REPORT(mU);
-  REPORT(mB);
-  REPORT(vtau);
-  REPORT(vbeta0);
-  REPORT(sigma2_beta0);
-  REPORT(vsigma2_lambda);
-  REPORT(vsigma2_beta);
-  REPORT(vsigma_tau);
-  REPORT(mEta);
-  REPORT(nll);
-
   return(nll);
 }
 #undef TMB_OBJECTIVE_PTR

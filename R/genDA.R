@@ -6,6 +6,7 @@
 #' @param class numeric or factor of class information.
 #' @param d  number of latent variables, d, in gllvm model. Non-negative integer, less than number of response variables (m). Defaults to 2.
 #' @param family  distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{poisson(link = "log")}, \code{"negative-binomial"} (with log link), \code{binomial(link = "logit")}, \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.
+#' @param row.eff logical. If \code{TRUE} (default is \code{FALSE}), row effects are included in the model
 #' @param standard.errors logical. If \code{TRUE} (default is \code{FALSE}) standard errors for parameter estimates are calculated
 #' 
 #' @return An object of class "genDA" includes the following components:
@@ -34,8 +35,9 @@
 #' @importFrom stats glm nlminb var prcomp rnorm
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom matrixStats colMeans2
+#' @importFrom MASS ginv
 #' 
-genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALSE){
+genDA <- function(y, X = NULL, class = NULL, family, d=2, row.eff= FALSE, standard.errors = FALSE){
   
   y <- as.matrix(y)
   
@@ -54,7 +56,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
   labels <- colnames(y)
   labels.row <- rownames(y)
   
-  if(!is.null(class)){
+  if(!is.null(class)|!is.null(X)){
+    
     if(is.factor(class)){
       l <- levels(class)
       class <- as.character(class)
@@ -159,13 +162,7 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
     sigma2_beta0	<- 1E2
     vsigma2_beta    <- rep(1E1,m)
     vsigma2_lambda  <- rep(1.0E0,m)
-    vsigma2_tau     <- rep(1.0E0,n)
-    
-    vsigma2 <- c()
-    vsigma2[1]           <- sigma2_beta0
-    vsigma2[1+(1:m)]     <- vsigma2_beta
-    vsigma2[1+m+(1:m)]   <- vsigma2_lambda
-    vsigma2[1+m+m+(1:n)] <- vsigma2_tau
+    if(row.eff){vsigma2_tau <- rep(1.0E0,n)} 
     
   } else {
     for (j in 1:m) {
@@ -193,15 +190,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
     
     sigma2_beta0	<- 1E2
     vsigma2_lambda  <- rep(1.0E0,m)
-    vsigma2_tau     <- rep(1.0E0,n)
-    
-    vsigma2 <- c()
-    vsigma2[1]           <- sigma2_beta0
-    vsigma2[1+(1:m)]   <- vsigma2_lambda
-    vsigma2[1+m+(1:n)] <- vsigma2_tau
-    
-    }
-  
+    if(row.eff){vsigma2_tau <- rep(1.0E0,n)}
+  }
   ## Initialise phi's ##
   
   vphi <- rep(0, m)
@@ -225,6 +215,14 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
       label_phi[j] <- 1
     }
   }
+  
+  disp <- !all(label_phi==0)
+  if(disp){
+    vphi <- vphi[label_phi==1]
+    vphi_inds <- rep(0,m)
+    vphi_inds[which(label_phi==1)]= 1:length(which(label_phi==1))
+    vphi_inds <- vphi_inds - 1
+  }
 
   
   fit <-  .genDA_start_values(y, X, family=family, d=d) 
@@ -238,26 +236,51 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
   if(d > 0) lambda <- mL.init[lower.tri(mL.init,diag = TRUE)]
   
   mU.init <- fit$mU #extracts LV
-  vtau.init <- rep(0,n)
+  if(row.eff){vtau.init <- rep(0,n)}
   vbeta0.init <- vbeta0.hat
   if(!is.null(X)){mB.init <- mB.hat}
   
+  # ----------------- FIT TMB ----------------------- # 
+  
+  if(row.eff & !is.null(X) & disp){
+    model_name = "genDA_f"
+  } else if(row.eff & !is.null(X) & !disp){
+    model_name = "genDA_f_null_dis"
+  } else if(row.eff & is.null(X) & disp){
+    model_name = "genDA_f_null_X"
+  } else if(row.eff & is.null(X) & !disp){
+    model_name = "genDA_f_null_X_dis"
+  } else if( !row.eff & !is.null(X) & disp){
+    model_name = "genDA_f_null_row"
+  } else if(!row.eff & !is.null(X) & !disp){
+    model_name = "genDA_f_null_row_dis"
+  } else if(!row.eff & is.null(X) & disp){
+    model_name = "genDA_f_null_row_X"
+  } else if(!row.eff & is.null(X) & !disp){
+    model_name = "genDA_f_null_row_X_dis"
+  }
+  
   data <- list()
-  if(!is.null(X)){data$model_name="genDA_f"} else {data$model_name = "genDA_f_null_X"}
+  data$model_name <- model_name
   data$y <- y
   if(!is.null(X)){data$X <- X}
-  data$vsigma2 <- vsigma2
+  data$sigma2_beta0 <- sigma2_beta0
+  if(!is.null(X)){data$vsigma2_beta <- vsigma2_beta}
+  data$vsigma2_lambda <- vsigma2_lambda
+  if(row.eff){data$vsigma2_tau <- vsigma2_tau}
   data$response_types <- tmb_types
   data$d <- d
+  if(disp){data$vphi_inds <- vphi_inds}
     
   parameters <- list()
-  parameters$log_vphi <- as.matrix(log(vphi))
+  if(disp){parameters$log_vphi <- as.matrix(log(vphi))}
   if(!is.null(X)) {parameters$mB <- mB.init}
   parameters$lambda <- lambda
   parameters$mU <- mU.init
-  parameters$vtau <- as.matrix(vtau.init)
+  if(row.eff){parameters$vtau <- as.matrix(vtau.init)}
   parameters$vbeta0 <- as.matrix(vbeta0.init)
-    
+  
+
   obj <-  MakeADFun(data,parameters,DLL = "genDA", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
   opt <-  nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
   
@@ -265,8 +288,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
   lj <- names(param)=="lambda"
   ui <- names(param)=="mU"
   b0j <- names(param)=="vbeta0"
-  ti <- names(param)=="vtau"
-  vj <- names(param)=="log_vphi"
+  if(row.eff){ti <- names(param)=="vtau"}
+  if(disp){vj <- names(param)=="log_vphi"}
   if(!is.null(X)){bj <- names(param)=="mB"}
   
   val <- -1*opt$objective
@@ -283,53 +306,36 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
     colnames(mU.hat) <- colnames(theta)
   }
   
+  mB.hat <-  NULL
   if(!is.null(X)){
     mB.hat <- t(matrix(nrow=m,ncol=p, param[bj]))
     colnames(mB.hat) <- labels
   }
   
-  vtau.hat <- param[ti]
+  vtau.hat <- NULL
+  if(row.eff){vtau.hat <- param[ti]; names(vtau.hat) <- labels.row}
+  
   vbeta0.hat <- opt$par[b0j]; names(vbeta0.hat) <- labels
   
-  
-  vphi.hat <- rep(0,m)
-  if(length(which(label_phi==1))>0){
+  vphi.hat <- NULL
+  if(disp){
+    vphi.hat <- rep(0,m)
     vphi.hat[which(label_phi==1)] <- exp(opt$par[vj][which(label_phi==1)])
+    names(vphi.hat) <- labels
   }
-  names(vphi.hat) <- labels
-  
-  if(!is.null(X)){
-    mEta.hat <- matrix(vtau.hat)%*%matrix(1,1,m) + matrix(1,n,1)%*%vbeta0.hat + X%*%mB.hat + mU.hat%*%t(theta)
-  } else {
-    mEta.hat <- matrix(vtau.hat)%*%matrix(1,1,m) + matrix(1,n,1)%*%vbeta0.hat  + mU.hat%*%t(theta)
-  } 
   
   
   if(standard.errors==TRUE){
     
-    sds <- obj$he()
-    colnames(sds) <- names(param)
-    rownames(sds) <- names(param)
-    
     sd <- list()
     
-    if(length(unique(response_types %in% c("negative-binomial", "gaussian", "log-normal")))==1){
-      
-      cov.mat <- solve(sds)
-      ses <- sqrt(diag(abs(cov.mat)))
+    sds <- obj$he()
+    cov.mat <- ginv(sds)
+    ses <- sqrt(diag(abs(cov.mat)))
+    names(ses) <- names(param)
  
-       if(all(response_types %in% c("negative-binomial", "gaussian", "log-normal"))){sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$vphi) <- labels }
-      
-    } else {
-  
-      inds <- which(label_phi!=1)
-      
-      cov.mat <- solve(sds[-inds, -inds])
-      ses <- sqrt(diag(abs(cov.mat)))
-      
-      sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat[which(label_phi==1)]; names(sd$vphi) <- labels[-inds]
-      
-    }
+
+    if(disp){sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$vphi) <- labels} 
     
     if(d > 0){
       sd$mU<-matrix(ses[names(ses)=="mU"],n,d)
@@ -342,7 +348,10 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
       colnames(sd$mU) <- colnames(sd$mL)
     }
     
-    sd$vtau <- ses[names(ses)=="vtau"]; names(sd$vtau) <- labels.row
+    if(row.eff){
+      sd$vtau <- ses[names(ses)=="vtau"]
+      names(sd$vtau) <- labels.row
+      }
     sd$vbeta0 <- ses[names(ses)=="vbeta0"]; names(sd$vbeta0) <- labels 
     if(!is.null(X)){
       sd$mB <- t(matrix(nrow=m,ncol=p, ses[bj]))
@@ -350,8 +359,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
     }
   }
   
+  
   if(is.null(X)){
-    mB.hat <-  NULL
     p <-  0
     vc <- NULL
   } else if (!is.null(X) & !is.null(class)){
@@ -366,7 +375,6 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
   params$mB <- mB.hat
   params$vtau <- vtau.hat
   params$vphi <- vphi.hat
-  params$mEta <- mEta.hat
   
   side.list <- list()
   side.list$p <- p
@@ -374,6 +382,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, standard.errors = FALS
   side.list$vc <- vc
   side.list$n <- n
   side.list$d <- d
+  side.list$row.eff <- row.eff
+  side.list$disp <- disp
   
   object <- list()
   object$call <- match.call()
