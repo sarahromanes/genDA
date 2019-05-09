@@ -42,7 +42,8 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
   A <- prior_beta[1]
   B <- prior_beta[2]
 
-  vsigma2_tau     <- rep(1.0E-4,n_test)
+  if(side.list$row.eff){vsigma2_tau <- rep(1.0E0,n_test)} else {vsigma2_tau <- rep(1.0E-4,n_test)}
+
   vtau.init <- rep(0,n_test)
   
   mU.init <- matrix(rnorm(n_test*d), nrow=n_test, ncol=d) # get same results if I use start.values.gllvm.TMB or random. 
@@ -54,23 +55,23 @@ predict.genDA <- function(object, new.y, newX = NULL, prior_beta = c(1,1), ...){
   for(i in 1:n_test){
     
     data_1 <- list()
-    data_1$model_name = "genDA_f_predict"
+    if(side.list$row.eff){data_1$model_name = "genDA_f_predict"} else {data_1$model_name = "genDA_f_predict_null_row"}
     data_1$y <- t(as.matrix(new.y[i, ]))
     data_1$X <- t(as.matrix(c(1, newX[i, ]))) #setting vc_test[i] = 1
-    data_1$vsigma2_tau <- vsigma2_tau[i]
+    if(side.list$row.eff){data_1$vsigma2_tau <- vsigma2_tau[i]}
     data_1$response_types <- object$side.list$tmb_types
     data_1$d <- d
     data_1$mB <- object$params$mB
     data_1$mL <- object$params$mL
     data_1$vbeta0 <- as.matrix(object$params$vbeta0)
-    data_1$vphi <- as.matrix(object$params$vphi)
+    if(disp){data_1$vphi <- as.matrix(object$params$vphi)} else{data_1$vphi <- as.matrix(rep(0, m))}
     
     data_0 <- data_1
     data_0$X <-  t(as.matrix(c(0, newX[i, ])))
         
     parameters <- list()
     parameters$mU <- t(as.matrix(mU.init[i,]))
-    parameters$vtau <- vtau.init[i]
+    if(side.list$row.eff){parameters$vtau <- vtau.init[i]}
     
     
     obj_1 <- MakeADFun(data_1,parameters,DLL = "genDA", silent=TRUE)
