@@ -1,31 +1,29 @@
-// --- genDA_f_null_X.hpp ---
+// --- genDA_f_null_row_X.hpp ---
 
-// genDA_f_null_X is the general genDA algorithm used to fit GLLVMs when there are NO covariates to be estimated.
+// genDA_f is the genDA algorithm used to fit GLLVMs when there are no row effects or covariates to be fit.
 
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR obj
 template <class Type>
-Type genDA_f_null_X(objective_function<Type>* obj) {
+Type genDA_f_null_row_X(objective_function<Type>* obj) {
 
   DATA_MATRIX(y);
   DATA_SCALAR(sigma2_beta0);
   DATA_VECTOR(vsigma2_lambda);
-  DATA_VECTOR(vsigma2_tau);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal), or 5 (NB)
   DATA_INTEGER(d);
   DATA_IVECTOR(vphi_inds);
-
+  
   PARAMETER_VECTOR(log_vphi);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
-  PARAMETER_MATRIX(vtau);
   PARAMETER_MATRIX(vbeta0);
 
   int n = y.array().rows();
   int m = y.array().cols();
 
   vector<Type> vphi = exp(log_vphi);
-  
+    
   // To create lambda as matrix upper triangle
 
   matrix<Type> mL(d,m);
@@ -55,7 +53,7 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
   matrix<Type> oneM = mOnes.array().row(0);
   matrix<Type> oneN = mOnes.array().col(0);
 
-  matrix<Type> mEta = vtau*oneM + oneN*vbeta0.transpose() +  mU*mL;
+  matrix<Type> mEta = oneN*vbeta0.transpose() +  mU*mL;
 
     // CALCULATE LOG LIKELIHOOD
 
@@ -90,7 +88,6 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
 
   // CALCULATE AND "ADD" REGULARISATION TERMS 
   
-  nll += 0.5*(vtau.array().pow(2.0)/vsigma2_tau.array()).array().sum(); 
   nll += 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
   
   for(int j = 0; j < m; j++){
@@ -151,7 +148,7 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
     
     nll += 0.5*log(mDet.determinant());
   }
-
+  
   return(nll);
 }
 #undef TMB_OBJECTIVE_PTR

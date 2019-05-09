@@ -1,21 +1,19 @@
-// --- genDA_f_null_X.hpp ---
+// --- genDA_f_null_X_dis.hpp ---
 
-// genDA_f_null_X is the general genDA algorithm used to fit GLLVMs when there are NO covariates to be estimated.
+// genDA_f_null_X_dis is the general genDA algorithm used to fit GLLVMs when there are NO covariates or dispersion to be estimated.
 
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR obj
 template <class Type>
-Type genDA_f_null_X(objective_function<Type>* obj) {
+Type genDA_f_null_X_dis(objective_function<Type>* obj) {
 
   DATA_MATRIX(y);
   DATA_SCALAR(sigma2_beta0);
   DATA_VECTOR(vsigma2_lambda);
   DATA_VECTOR(vsigma2_tau);
-  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal), or 5 (NB)
+  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
   DATA_INTEGER(d);
-  DATA_IVECTOR(vphi_inds);
 
-  PARAMETER_VECTOR(log_vphi);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
   PARAMETER_MATRIX(vtau);
@@ -23,8 +21,6 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
 
   int n = y.array().rows();
   int m = y.array().cols();
-
-  vector<Type> vphi = exp(log_vphi);
   
   // To create lambda as matrix upper triangle
 
@@ -71,20 +67,7 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
         // POISSON DISTRIBUTION
         nll-=  dpois(y(i,j), exp(mEta(i,j)), true);
       }
-      if(response_types(j)==3){
-        // GAUSSIAN DISTRIBUTION
-        nll -= dnorm(y(i,j), mEta(i,j), vphi(vphi_inds(j)), true);
-      }
-      if(response_types(j)==4){
-        // LOG NORMAL DISTRIBUTION
-        nll-= dnorm(log(y(i,j)), mEta(i,j), vphi(vphi_inds(j)), true);
-      }
-      if(response_types(j)==5){
-        // NEGATIVE BINOMIAL DISTRIBUTION
-        Type mu = exp(mEta(i,j));
-        Type var = mu + pow(mu,2.0)/vphi(vphi_inds(j));
-        nll-= dnbinom2(y(i,j), mu, var, true);
-      }
+
     }
   }
 
@@ -132,19 +115,6 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
       if(response_types(j)==2){
         // POISSON DISTRIBUTION
         mVal += exp(mEta(i,j))*(lambda_j*lambda_j.transpose());
-      }
-      if(response_types(j)==3){
-        // GAUSSIAN DISTRIBUTION
-        mVal += (1/(pow(vphi(vphi_inds(j)),2.0)))*(lambda_j*lambda_j.transpose());
-      }
-      if(response_types(j)==4){
-        // LOGNORMAL DISTRIBUTION
-        mVal += (1/(pow(vphi(vphi_inds(j)),2.0)))*(lambda_j*lambda_j.transpose());
-      }
-      if(response_types(j)==5){
-        // NEGATIVE BINOMIAL DISTRIBUTION
-        Type sderiv = ((y(i,j)+vphi(vphi_inds(j)))*(vphi(vphi_inds(j))*exp(mEta(i,j)))/pow(vphi(vphi_inds(j)) + exp(mEta(i,j)),2.0));
-        mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
     }
     matrix<Type> mDet = mVal + mI;

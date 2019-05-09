@@ -5,11 +5,10 @@
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR obj
 template <class Type>
-Type genDA_f_predict(objective_function<Type>* obj) {
+Type genDA_f_predict_null_row(objective_function<Type>* obj) {
 
   DATA_MATRIX(y);
   DATA_MATRIX(X);
-  DATA_SCALAR(vsigma2_tau);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), 4 (Log-Normal), 5(NB)
   DATA_INTEGER(d);
   DATA_MATRIX(mB); // optimised from previous TMB call
@@ -17,7 +16,6 @@ Type genDA_f_predict(objective_function<Type>* obj) {
   DATA_MATRIX(vbeta0); //optimised from previous TMB call
   DATA_MATRIX(vphi); //optimised from previous TMB call
   PARAMETER_MATRIX(mU);
-  PARAMETER(vtau);
 
   int n = 1 ;
   int m = y.array().cols();
@@ -31,7 +29,8 @@ Type genDA_f_predict(objective_function<Type>* obj) {
 
   matrix<Type> oneM = mOnes.array().row(0);
   
-  matrix<Type> mEta = vtau*oneM + vbeta0.transpose() + X*mB +  mU*mL;
+  matrix<Type> mEta = vbeta0.transpose() + X*mB +  mU*mL;
+
 
     // CALCULATE LOG LIKELIHOOD
 
@@ -66,7 +65,6 @@ Type genDA_f_predict(objective_function<Type>* obj) {
   
   // // CALCULATE AND "ADD" REGULARISATION TERMS 
   
-  nll += 0.5*pow(vtau,2.0)/vsigma2_tau;
   nll += 0.5*(mU.array().row(0).pow(2.0)).array().sum();
   
   

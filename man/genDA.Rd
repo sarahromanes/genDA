@@ -4,7 +4,8 @@
 \alias{genDA}
 \title{genDA: Multi-distributional Discriminant Analysis using Generalised Linear Latent Variable Modelling}
 \usage{
-genDA(y, X = NULL, class = NULL, family, d = 2)
+genDA(y, X = NULL, class = NULL, family, d = 2, row.eff = FALSE,
+  standard.errors = FALSE)
 }
 \arguments{
 \item{y}{(n x m) matrix or data.frame of responses.}
@@ -16,10 +17,15 @@ genDA(y, X = NULL, class = NULL, family, d = 2)
 \item{family}{distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{poisson(link = "log")}, \code{"negative-binomial"} (with log link), \code{binomial(link = "logit")}, \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.}
 
 \item{d}{number of latent variables, d, in gllvm model. Non-negative integer, less than number of response variables (m). Defaults to 2.}
+
+\item{row.eff}{logical. If \code{TRUE} (default is \code{FALSE}), row effects are included in the model}
+
+\item{standard.errors}{logical. If \code{TRUE} (default is \code{FALSE}) standard errors for parameter estimates are calculated}
 }
 \value{
 An object of class "genDA" includes the following components:
 
+ \item{call }{function call}
  \item{logL }{log likelihood}
  \item{lvs }{latent variables}
  \item{params}{list of parameters
@@ -31,7 +37,8 @@ An object of class "genDA" includes the following components:
    \item{vphi }{ dispersion parameters \eqn{\phi} for negative binomial, Gaussian, or log-normal family columns. 0 for columns not belonging to these families}
    \item{mEta } calculated value of \eqn{\eta} with estimated coefficients above.
    }}
- \item{predict.values}{list of additional parameters necessary to be passed onto to the predict.genDA method}
+ \item{sd } standard errors of parameters
+ \item{side.list }{list of additional parameters necessary to be passed onto to the predict.genDA method}
 }
 \description{
 Fits a genDA model for multivariate data through generalised linear latent variable modelling.
