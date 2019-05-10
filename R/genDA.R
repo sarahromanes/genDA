@@ -32,7 +32,7 @@
 #' @export
 #' @importFrom TMB MakeADFun
 #' @importFrom mvabund manyglm
-#' @importFrom stats glm nlminb var prcomp rnorm
+#' @importFrom stats glm nlminb var prcomp rnorm optimHess
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom matrixStats colMeans2
 #' @importFrom MASS ginv
@@ -329,7 +329,8 @@ genDA <- function(y, X = NULL, class = NULL, family, d=2, row.eff= FALSE, standa
     
     sd <- list()
     
-    sds <- obj$he()
+    #sds <- obj$he()
+    sds <- optimHess(obj$par,obj$fn, obj$gr)
     cov.mat <- ginv(sds)
     ses <- sqrt(diag(abs(cov.mat)))
     names(ses) <- names(param)
