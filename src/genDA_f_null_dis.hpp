@@ -112,7 +112,7 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
       matrix<Type> lambda_j = mL.array().col(j);
       if(response_types(j)==1){
         // BERNOULLI DISTRIBUTION
-        Type sderiv = (exp(mEta(i,j))*((1.0 + exp(mEta(i,j))) -1.0))/( pow((1.0 + exp(mEta(i,j))), 2.0));
+        Type sderiv = 1.0 /( pow((1.0 + exp(mEta(i,j))), 2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
       if(response_types(j)==2){

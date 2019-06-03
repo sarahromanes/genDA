@@ -11,10 +11,34 @@ print.genDA <- function(object,...) {
     stop("object not of class 'genDA'")
   }
   
+ cat("                      genDA GLLVM fitting procedure                      \n")
+ cat("\n")
+ cat("\n")
+ 
+ cat("Common Covariance Assumption: \n")
+ if(names(object[1])=="call"){
+   print(TRUE)
+ } else {
+   print(FALSE)
+ }
+ cat("\n")
+ 
  cat("Call: \n")
- print(object$call)
+ if(names(object[1])=="call"){
+  print(object$call)
+ } else {
+   print(object[[1]][[1]])
+ }
+ 
+ cat("\n")
  
  cat("log-likelihood: \n")
- print(object$logL)
+ if(names(object[1])=="call"){
+   print(object$logL)
+ } else {
+   print(unlist(sapply(object, function(x) x[[2]])))
+ }
+ 
+
  
 }

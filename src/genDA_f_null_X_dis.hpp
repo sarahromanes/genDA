@@ -11,7 +11,7 @@ Type genDA_f_null_X_dis(objective_function<Type>* obj) {
   DATA_SCALAR(sigma2_beta0);
   DATA_VECTOR(vsigma2_lambda);
   DATA_VECTOR(vsigma2_tau);
-  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
+  DATA_IVECTOR(response_types); 
   DATA_INTEGER(d);
 
   PARAMETER_VECTOR(lambda);
@@ -109,7 +109,7 @@ Type genDA_f_null_X_dis(objective_function<Type>* obj) {
       matrix<Type> lambda_j = mL.array().col(j);
       if(response_types(j)==1){
         // BERNOULLI DISTRIBUTION
-        Type sderiv = (exp(mEta(i,j))*((1.0 + exp(mEta(i,j))) -1.0))/( pow((1.0 + exp(mEta(i,j))), 2.0));
+        Type sderiv = 1.0 /( pow((1.0 + exp(mEta(i,j))), 2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
       if(response_types(j)==2){

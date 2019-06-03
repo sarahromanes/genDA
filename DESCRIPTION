@@ -8,7 +8,7 @@ Description: genDA is a Discriminant Analysis (DA) algorithm capable for use in 
       It utilises Generalised Linear Latent Variable Models (GLLVMs) to capture the covariance structure between the different response types and provide an efficient classifier for such datasets. 
       This package leverages the highly resourcful TMB package for fast and accurate gradient calculation in C++.
 License: GPL-2
-Imports: mvtnorm, matrixStats, MASS
+Imports: mvtnorm, matrixStats, MASS, purrr
 Depends: TMB, mvabund, RcppEigen
 Encoding: UTF-8
 LazyData: true

@@ -4,26 +4,28 @@
 \alias{genDA}
 \title{genDA: Multi-distributional Discriminant Analysis using Generalised Linear Latent Variable Modelling}
 \usage{
-genDA(y, X = NULL, class = NULL, family, d = 2, row.eff = FALSE,
-  standard.errors = FALSE)
+genDA(y, X = NULL, class = NULL, family, num.lv = 2,
+  row.eff = FALSE, standard.errors = FALSE, common.covariance = TRUE)
 }
 \arguments{
 \item{y}{(n x m) matrix or data.frame of responses.}
 
 \item{X}{matrix or data.frame of covariates}
 
-\item{class}{numeric or factor of class information.}
+\item{class}{a factor of class information.}
 
-\item{family}{distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{poisson(link = "log")}, \code{"negative-binomial"} (with log link), \code{binomial(link = "logit")}, \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.}
+\item{family}{distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{"poisson"} (with log link), \code{"ZIP"} (Zero Inflated Poisson), \code{"negative-binomial"} (with log link), \code{"binomial"} (with \code{logit} link), \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.}
 
-\item{d}{number of latent variables, d, in gllvm model. Non-negative integer, less than number of response variables (m). Defaults to 2.}
+\item{num.lv}{number of latent variables, d, in gllvm model. Non-negative integer, less than number of response variables (m). Defaults to 2.}
 
 \item{row.eff}{logical. If \code{TRUE} (default is \code{FALSE}), row effects are included in the model}
 
-\item{standard.errors}{logical. If \code{TRUE} (default is \code{FALSE}) standard errors for parameter estimates are calculated}
+\item{standard.errors}{logical. If \code{TRUE} (default is \code{FALSE}) standard errors for parameter estimates are calculated.}
+
+\item{common.covariance}{logical. Default \code{TRUE}. Specifies whether different covariance structures should be fit for each class, if \code{class} is non-null. If class is not provided, then only one covariance structure can be fit. See vignette for more details.}
 }
 \value{
-An object of class "genDA" includes the following components:
+An object of class "genDA" includes the following components below. If \code{common.covariance} is set to \code{FALSE}, this information will be contained in seperate lists for each of the models fit for the seperate classes.
 
  \item{call }{function call}
  \item{logL }{log likelihood}
@@ -31,11 +33,10 @@ An object of class "genDA" includes the following components:
  \item{params}{list of parameters
  \itemize{
    \item{mL }{ coefficients related to latent variables}
-   \item{vbeta0 }{ column specific intercepts}
-   \item{mB }{ coefficients related to covariates X and/or class (X is combined with class if included)}
-   \item{vtau }{ row-specific intercepts}
-   \item{vphi }{ dispersion parameters \eqn{\phi} for negative binomial, Gaussian, or log-normal family columns. 0 for columns not belonging to these families}
-   \item{mEta } calculated value of \eqn{\eta} with estimated coefficients above.
+   \item{beta0 }{ column specific intercepts}
+   \item{Xcoef }{ coefficients related to covariates X and/or class (X is combined with class if included)}
+   \item{row }{ row-specific intercepts}
+   \item{phi }{ dispersion parameters \eqn{\phi} for negative binomial, Gaussian, or log-normal family columns. 0 for columns not belonging to these families}
    }}
  \item{sd } standard errors of parameters
  \item{side.list }{list of additional parameters necessary to be passed onto to the predict.genDA method}
