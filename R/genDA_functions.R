@@ -1,7 +1,7 @@
 
 ####################### LDA FIT (common covariance structure) ###################################
 
-.genDA_fit_LDA <- function(y, X, class,  num.lv, row.eff, tmb_types, response_types, standard.errors, call){
+.genDA_fit_LDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row){
   
   n <- nrow(y)
   m <- ncol(y)
@@ -265,7 +265,7 @@
   
   if(is.null(X)){p <-  0}
   if (!is.null(class)){
-    vc <- classF
+    vc <- class
   } else if (is.null(class)) {
     vc <- NULL
   }
@@ -303,7 +303,7 @@
 
 ####################### QDA FIT (seperate covariance structure) #################################
 
-.genDA_fit_QDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call){
+.genDA_fit_QDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row){
   
   K <- length(levels(class))
   
@@ -318,7 +318,7 @@
       X_sub <- NULL
     }
     
-    object[[k]] <- quiet(.genDA_fit_LDA(y_sub, X_sub, classF, num.lv, row.eff, tmb_types, response_types, standard.errors, call = call))
+    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv, row.eff =row.eff,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row))
     
   }
   

@@ -46,6 +46,7 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
     common.covariance = TRUE
   }
   
+  
   if(is.null(colnames(y))){
     colnames(y)<-paste("V",1:ncol(y), sep="")
   }else{
@@ -60,8 +61,6 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
   
   labels <- colnames(y)
   labels.row <- rownames(y)
-  
-  classF <-  NULL
   
   if(!is.null(class)|!is.null(X)){
     
@@ -80,7 +79,10 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
        }
     }
       p <- ncol(X)
+  } else {
+    classF <- NULL
   }
+
   
   n <- nrow(y)
   m <- ncol(y)
@@ -148,9 +150,9 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
  call <- match.call()
   
   if(common.covariance){
-    return(suppressWarnings(.genDA_fit_LDA(y = y, X = X, class= classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types =response_types, standard.errors = standard.errors, call = call)))
+    return(suppressWarnings(.genDA_fit_LDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types =response_types, standard.errors = standard.errors, call = call, labels = labels, labels.row = labels.row)))
   } else {
-    return(suppressWarnings(.genDA_fit_QDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call)))
+    return(suppressWarnings(.genDA_fit_QDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call, labels = labels, labels.row = labels.row)))
   }
 
 }

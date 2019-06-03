@@ -106,7 +106,7 @@ predict.genDA <- function(object, newdata, newX = NULL, ...){
         if(!is.null(newX)){data$mB <- object[[k]]$params$Xcoef} else {data$mB <- as.matrix(t(rep(0, m))) }
         data$mL <- object[[k]]$params$mL
         data$vbeta0 <- as.matrix(object[[k]]$params$beta0)
-        if(disp){data$vphi <- as.matrix(object[[k]]$params$vphi)} else{data$vphi <- as.matrix(rep(0, m))}
+        if(disp){data$vphi <- as.matrix(object[[k]]$params$phi)} else{data$vphi <- as.matrix(rep(0, m))}
         
         parameters$mU <- t(as.matrix(mU.init[i,]))
         if(object[[k]]$side.list$row.eff){parameters$vtau <- row.init[i]}
@@ -116,15 +116,18 @@ predict.genDA <- function(object, newdata, newX = NULL, ...){
       obj <- MakeADFun(data,parameters,DLL = "genDA", silent=TRUE,  inner.control=list(mgcmax = 1e+200,maxit = 1000,tol10=0.01))
       opt <-  nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
   
+      n_k[k] <- n_k[k] + 1
       
-      ll[i,k]<- -1*(opt$objective) +  lgamma(n_k[k] + 1)
+      ll[i,k]<- -1*(opt$objective) +  sum(lgamma(n_k)) - lgamma(sum(n_k))
+      
+      n_k[k] <- n_k[k] -1
     }
     
-  }s
+  }
   
   prob_class <- .logMatToGamma(ll)
   class <-  apply(prob_class, 1, which.max)
-  class <-  as.factor(purrr::map_chr(class, .num.2.fac,classF))
+  class <-  as.factor(purrr::map_chr(class, .num.2.fac,vc))
   
   return(list(class = class, 
               prob_class = round(prob_class,4)))
