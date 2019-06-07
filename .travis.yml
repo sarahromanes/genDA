@@ -13,3 +13,5 @@ install:
     - Rscript -e 'install.packages("TMB", dependencies = TRUE)'
     - Rscript -e 'install.packages("matrixStats", dependencies = TRUE)'
     - Rscript -e 'install.packages("mvtnorm", dependencies = TRUE)'
+    - Rscript -e 'install.packages("purrr", dependencies = TRUE)'
+    - Rscript -e 'install.packages("MASS", dependencies = TRUE)'
