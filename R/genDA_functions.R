@@ -34,7 +34,7 @@
     
     # SET RIDGE REGRESSION CONSTANTS
     
-    sigma2_beta0	<- 1E2
+    sigma2_beta0	<- 1E1
     vsigma2_beta    <- rep(1E1,m)
     vsigma2_lambda  <- rep(1.0E0,m)
     if(row.eff){vsigma2_tau <- rep(1.0E0,n)} 
@@ -63,7 +63,7 @@
     
     # SET RIDGE REGRESSION CONSTANTS
     
-    sigma2_beta0	<- 1E2
+    sigma2_beta0	<- 1E1
     vsigma2_lambda  <- rep(1.0E0,m)
     if(row.eff){vsigma2_tau <- rep(1.0E0,n)}
   }
@@ -318,7 +318,7 @@
       X_sub <- NULL
     }
     
-    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv, row.eff =row.eff,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row))
+    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv, row.eff =row.eff,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row[which(class==levels(class)[k])]))
     
   }
   

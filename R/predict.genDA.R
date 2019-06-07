@@ -84,7 +84,7 @@ predict.genDA <- function(object, newdata, newX = NULL, ...){
         if(object$side.list$row.eff){data$model_name = "genDA_f_predict"} else {data$model_name = "genDA_f_predict_null_row"}
         data$y <- t(as.matrix(newdata[i, ]))
         data$X <- t(as.matrix(c(class_test[k, ], newX[i, ])))
-        if(object$side.list$row.eff){data_1$vsigma2_tau <- vsigma2_tau[i]}
+        if(object$side.list$row.eff){data$vsigma2_tau <- vsigma2_tau[i]}
         data$response_types <- object$side.list$tmb_types
         data$d <- num.lv
         data$mB <- object$params$Xcoef

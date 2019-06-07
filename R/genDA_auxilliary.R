@@ -25,8 +25,8 @@
   
   while(crit > min.err){
     
-    mS <- solve(crossprod(mZ,solve(mD))%*%mZ + diag(k))
-    mM <- tcrossprod(mS,as.matrix(mZ))%*%tcrossprod(solve(mD),y-mMu) # note, we have a matrix of m, each column for each observation
+    mS <- tryCatch(solve(crossprod(mZ,tryCatch(solve(mD), error = function(e) ginv(mD)))%*%mZ + diag(k)),  error = function(e) ginv(crossprod(mZ,tryCatch(solve(mD), error = function(e) ginv(mD)))%*%mZ + diag(k)))
+    mM <- tcrossprod(mS,as.matrix(mZ))%*%tcrossprod(tryCatch(solve(mD), error = function(e) ginv(mD)),y-mMu) # note, we have a matrix of m, each column for each observation
     
     eU <- mM
     
@@ -41,7 +41,7 @@
       
     }
     
-    mZ.new <- crossprod(eU.sum,solve(eUU.sum))
+    mZ.new <- crossprod(eU.sum, tryCatch(solve(eUU.sum), error = function(e) ginv(eUU.sum)))
     mD.new <- diag(diag(cov(y)*((n-1)/n) - (mZ.new%*%eU.sum/n))) #note I have corrected the sample cov matrix to data cov matrix
     
     crit <- mean((mD - mD.new)^2)
