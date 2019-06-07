@@ -4,17 +4,14 @@
 \alias{predict.genDA}
 \title{Predict Method for genDA}
 \usage{
-\method{predict}{genDA}(object, new.y, newX = NULL, prior_beta = c(1,
-  1), ...)
+\method{predict}{genDA}(object, newdata, newX = NULL, ...)
 }
 \arguments{
 \item{object}{an object of class 'genDA'.}
 
-\item{new.y}{A new data frame or matrix of response data. Must be numeric. Column response (family) types will be assumed to match that of the trained genDA object.}
+\item{newdata}{A new data frame or matrix of response data. Must be numeric. Column response (family) types will be assumed to match that of the trained genDA object.}
 
 \item{newX}{A new data frame or matrix of known covariate data.}
-
-\item{prior_beta}{A vector of parameters for the beta prior for class prediction. Defaults to c(1,1) (Uninformative prior)}
 
 \item{...}{not used.}
 }

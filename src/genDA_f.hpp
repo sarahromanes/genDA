@@ -13,7 +13,7 @@ Type genDA_f(objective_function<Type>* obj) {
   DATA_VECTOR(vsigma2_beta);
   DATA_VECTOR(vsigma2_lambda);
   DATA_VECTOR(vsigma2_tau);
-  DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal), or 5 (NB)
+  DATA_IVECTOR(response_types);
   DATA_INTEGER(d);
   DATA_IVECTOR(vphi_inds);
   
@@ -88,6 +88,11 @@ Type genDA_f(objective_function<Type>* obj) {
         Type var = mu + pow(mu,2.0)/vphi(vphi_inds(j));
         nll-= dnbinom2(y(i,j), mu, var, true);
       }
+      if(response_types(j)==6){
+        // ZERO INFLATED POISSON DISTRIBUTION
+        vphi(vphi_inds(j))= vphi(vphi_inds(j))/ (1.0 +vphi(vphi_inds(j)));
+        nll -= dzipois(y(i,j), exp(mEta(i,j)),vphi(vphi_inds(j)), true); 
+      }
     }
   }
 
@@ -130,7 +135,7 @@ Type genDA_f(objective_function<Type>* obj) {
       matrix<Type> lambda_j = mL.array().col(j);
       if(response_types(j)==1){
         // BERNOULLI DISTRIBUTION
-        Type sderiv = (exp(mEta(i,j))*((1.0 + exp(mEta(i,j))) -1.0))/( pow((1.0 + exp(mEta(i,j))), 2.0));
+        Type sderiv = 1.0 /( pow((1.0 + exp(mEta(i,j))), 2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
       }
       if(response_types(j)==2){
@@ -149,6 +154,16 @@ Type genDA_f(objective_function<Type>* obj) {
         // NEGATIVE BINOMIAL DISTRIBUTION
         Type sderiv = ((y(i,j)+vphi(vphi_inds(j)))*(vphi(vphi_inds(j))*exp(mEta(i,j)))/pow(vphi(vphi_inds(j)) + exp(mEta(i,j)),2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
+      }
+      if(response_types(j)==6){
+        // ZERO INFLATED POISSON DISTRIBUTION
+        Type sderiv = 0.0;
+        if(y(i,j)==0){ 
+         sderiv = -1*( (vphi(vphi_inds(j)) -1.0)*exp(mEta(i,j))*(vphi(vphi_inds(j))*(-exp(exp(mEta(i,j))) + exp(mEta(i,j) + exp(mEta(i,j))) + 1 ) -1 ))/pow(( (vphi(vphi_inds(j))*(exp(exp(mEta(i,j))) -1.0 ) ) + 1.0 ), 2.0);
+        } else {
+        sderiv = exp(mEta(i,j));
+        }
+        mVal += sderiv*(lambda_j*lambda_j.transpose()); 
       }
     }
     matrix<Type> mDet = mVal + mI;
