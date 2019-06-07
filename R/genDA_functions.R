@@ -1,7 +1,7 @@
 
 ####################### LDA FIT (common covariance structure) ###################################
 
-.genDA_fit_LDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row){
+.genDA_fit_LDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
   
   n <- nrow(y)
   m <- ncol(y)
@@ -230,10 +230,10 @@
     
     if(disp){
       for(j in 1:m){
-        if(label_phi!=1){
+        if(label_phi[j]!=1){
           next
         }
-        if(response_types[j]=="ZIP"){
+        if(response_types[j]!="ZIP"){
           sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$vphi) <- labels
         } else {
           sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat/(1 + vphi.hat); names(sd$vphi) <- labels
@@ -303,7 +303,7 @@
 
 ####################### QDA FIT (seperate covariance structure) #################################
 
-.genDA_fit_QDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row){
+.genDA_fit_QDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
   
   K <- length(levels(class))
   
@@ -318,7 +318,7 @@
       X_sub <- NULL
     }
     
-    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv, row.eff =row.eff,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row[which(class==levels(class)[k])]))
+    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv, row.eff =row.eff,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row[which(class==levels(class)[k])], family=family))
     
   }
   

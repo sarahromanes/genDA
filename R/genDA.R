@@ -150,9 +150,9 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
  call <- match.call()
   
   if(common.covariance){
-    return(suppressWarnings(.genDA_fit_LDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types =response_types, standard.errors = standard.errors, call = call, labels = labels, labels.row = labels.row)))
+    return(suppressWarnings(.genDA_fit_LDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types =response_types, standard.errors = standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
   } else {
-    return(suppressWarnings(.genDA_fit_QDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call, labels = labels, labels.row = labels.row)))
+    return(suppressWarnings(.genDA_fit_QDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
   }
 
 }
