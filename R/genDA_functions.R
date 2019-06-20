@@ -34,10 +34,10 @@
     
     # SET RIDGE REGRESSION CONSTANTS
     
-    sigma2_beta0	<- 1E1
+    sigma2_beta0	<- 1E2
     vsigma2_beta    <- rep(1E1,m)
     vsigma2_lambda  <- rep(1.0E0,m)
-    if(row.eff){vsigma2_tau <- rep(1.0E0,n)} 
+    if(row.eff){vsigma2_tau <- rep(1.0E2,n)} 
     
   } else {
     for (j in 1:m) {
@@ -63,9 +63,9 @@
     
     # SET RIDGE REGRESSION CONSTANTS
     
-    sigma2_beta0	<- 1E1
+    sigma2_beta0	<- 1E2
     vsigma2_lambda  <- rep(1.0E0,m)
-    if(row.eff){vsigma2_tau <- rep(1.0E0,n)}
+    if(row.eff){vsigma2_tau <- rep(1.0E2,n)}
   }
   ## Initialise phi's ##
   
@@ -234,9 +234,9 @@
           next
         }
         if(response_types[j]!="ZIP"){
-          sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$vphi) <- labels
+          sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$phi) <- labels
         } else {
-          sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat/(1 + vphi.hat); names(sd$vphi) <- labels
+          sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat/(1 + vphi.hat); names(sd$phi) <- labels
         }
       }
     } 
@@ -254,9 +254,9 @@
     
     if(row.eff){
       sd$vtau <- ses[names(ses)=="vtau"]
-      names(sd$vtau) <- labels.row
+      names(sd$row) <- labels.row
     }
-    sd$vbeta0 <- ses[names(ses)=="vbeta0"]; names(sd$vbeta0) <- labels 
+    sd$vbeta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels 
     if(!is.null(X)){
       sd$mB <- t(matrix(nrow=m,ncol=p, ses[bj]))
       colnames(sd$mB) <- labels
