@@ -234,9 +234,9 @@
           next
         }
         if(response_types[j]!="ZIP"){
-          sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$phi) <- labels
+          sd$phi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$phi) <- labels
         } else {
-          sd$vphi <- ses[names(ses)=="log_vphi"]*vphi.hat/(1 + vphi.hat); names(sd$phi) <- labels
+          sd$phi <- ses[names(ses)=="log_vphi"]*vphi.hat/(1 + vphi.hat); names(sd$phi) <- labels
         }
       }
     } 
@@ -253,10 +253,10 @@
     }
     
     if(row.eff){
-      sd$vtau <- ses[names(ses)=="vtau"]
+      sd$row <- ses[names(ses)=="vtau"]
       names(sd$row) <- labels.row
     }
-    sd$vbeta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels 
+    sd$beta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels 
     if(!is.null(X)){
       sd$mB <- t(matrix(nrow=m,ncol=p, ses[bj]))
       colnames(sd$mB) <- labels
