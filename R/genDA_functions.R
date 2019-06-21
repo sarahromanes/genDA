@@ -34,10 +34,10 @@
     
     # SET RIDGE REGRESSION CONSTANTS
     
-    sigma2_beta0	<- 1E2
+    sigma2_beta0	<- 1E0
     vsigma2_beta    <- rep(1E1,m)
     vsigma2_lambda  <- rep(1.0E0,m)
-    if(row.eff){vsigma2_tau <- rep(1.0E2,n)} 
+    if(row.eff){vsigma2_tau <- rep(1.0E0,n)} 
     
   } else {
     for (j in 1:m) {
@@ -63,9 +63,9 @@
     
     # SET RIDGE REGRESSION CONSTANTS
     
-    sigma2_beta0	<- 1E2
+    sigma2_beta0	<- 1E0
     vsigma2_lambda  <- rep(1.0E0,m)
-    if(row.eff){vsigma2_tau <- rep(1.0E2,n)}
+    if(row.eff){vsigma2_tau <- rep(1.0E-1,n)}
   }
   ## Initialise phi's ##
   
