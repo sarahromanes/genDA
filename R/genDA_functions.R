@@ -258,8 +258,8 @@
     }
     sd$beta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels 
     if(!is.null(X)){
-      sd$mB <- t(matrix(nrow=m,ncol=p, ses[bj]))
-      colnames(sd$mB) <- labels
+      sd$Xcoef <- t(matrix(nrow=m,ncol=p, ses[bj]))
+      colnames(sd$Xcoef) <- labels
     }
   }
   
