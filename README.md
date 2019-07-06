@@ -11,7 +11,7 @@ Overview
 
 This package is part of a suite of discriminant analysis packages we have authored for large-scale/complex datasets. See also our package [multiDA](https://github.com/sarahromanes/multiDA), a statistical ML method for high dimensional, Gaussian data, with feature selection.
 
-This work was presented at ACEMS - Enabling Algorithms Symposium in June, 2019. See a run down of the mathematics behind this package [here](https://sarahromanes.github.io/talks/ACEMES/ACEMS_SarahRomanes.pdf)
+This work was presented at ACEMS - Enabling Algorithms Symposium in June, 2019. See a run down of the mathematics behind this package [here](https://sarahromanes.github.io/talks/ACEMS/ACEMS_SarahRomanes.pdf).
 
 
 Installation
