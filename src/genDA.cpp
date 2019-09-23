@@ -7,13 +7,7 @@
 #include "genDA_f_null_dis.hpp"
 #include "genDA_f_null_X.hpp"
 #include "genDA_f_null_X_dis.hpp"
-#include "genDA_f_null_row.hpp"
-#include "genDA_f_null_row_dis.hpp"
-#include "genDA_f_null_row_X.hpp"
-#include "genDA_f_null_row_X_dis.hpp"
-
 #include "genDA_f_predict.hpp"
-#include "genDA_f_predict_null_row.hpp"
 
 template<class Type>
 Type objective_function<Type>::operator() () {
@@ -26,18 +20,8 @@ Type objective_function<Type>::operator() () {
       return genDA_f_null_X(this);
   } else if(model_name == "genDA_f_null_X_dis"){
       return genDA_f_null_X_dis(this);
-  } else if(model_name =="genDA_f_null_row"){
-    return genDA_f_null_row(this);
-  } else if(model_name == "genDA_f_null_row_dis"){
-    return genDA_f_null_row_dis(this);
-  } else if(model_name == "genDA_f_null_row_X"){
-    return genDA_f_null_row_X(this);
-  } else if(model_name == "genDA_f_null_row_X_dis"){
-    return genDA_f_null_row_X_dis(this);
   } else if(model_name =="genDA_f_predict"){
     return genDA_f_predict(this);
-  } else if(model_name == "genDA_f_predict_null_row"){
-    return genDA_f_predict_null_row(this);
   } else {
     error("Unknown model_name.");
   }

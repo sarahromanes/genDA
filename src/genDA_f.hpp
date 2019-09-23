@@ -9,27 +9,26 @@ Type genDA_f(objective_function<Type>* obj) {
 
   DATA_MATRIX(y);
   DATA_MATRIX(X);
-  DATA_SCALAR(sigma2_beta0);
   DATA_VECTOR(vsigma2_beta);
   DATA_VECTOR(vsigma2_lambda);
-  DATA_VECTOR(vsigma2_tau);
   DATA_IVECTOR(response_types);
   DATA_INTEGER(d);
+  DATA_INTEGER(p);
   DATA_IVECTOR(vphi_inds);
   
   PARAMETER_VECTOR(log_vphi);
-  PARAMETER_MATRIX(mB);
+  PARAMETER_VECTOR(beta);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
-  PARAMETER_MATRIX(vtau);
-  PARAMETER_MATRIX(vbeta0);
 
   int n = y.array().rows();
   int m = y.array().cols();
 
+
   vector<Type> vphi = exp(log_vphi);
     
   // To create lambda as matrix upper triangle
+  
 
   matrix<Type> mL(d,m);
   if(d>0){
@@ -48,17 +47,21 @@ Type genDA_f(objective_function<Type>* obj) {
     }
   }
   
-  matrix<Type> mOnes(n,m); // create a matrix of ones, and then extract a row and column below to get mOnes (length m, and n) below
-  for(int i =0; i < n; i++){
-      for(int j = 0; j < m; j++){
-          mOnes(i,j) = 1;
+  matrix<Type> mB(p,m);
+
+    for (int j=0; j<m; j++){
+      for (int k=0; k<p; k++){
+          mB(k,j) = beta(j);
+          if (k > 0){
+            mB(k,j) = beta(k+j+k*m-(k*(k-1))/2-2*k);
+          }
+        
       }
-  }
+    }
+  
 
-  matrix<Type> oneM = mOnes.array().row(0);
-  matrix<Type> oneN = mOnes.array().col(0);
+  matrix<Type> mEta = X*mB+  mU*mL;
 
-  matrix<Type> mEta = vtau*oneM + oneN*vbeta0.transpose() + X*mB +  mU*mL;
 
     // CALCULATE LOG LIKELIHOOD
 
@@ -88,19 +91,11 @@ Type genDA_f(objective_function<Type>* obj) {
         Type var = mu + pow(mu,2.0)/vphi(vphi_inds(j));
         nll-= dnbinom2(y(i,j), mu, var, true);
       }
-      if(response_types(j)==6){
-        // ZERO INFLATED POISSON DISTRIBUTION
-        vphi(vphi_inds(j))= vphi(vphi_inds(j))/ (1.0 +vphi(vphi_inds(j)));
-        nll -= dzipois(y(i,j), exp(mEta(i,j)),vphi(vphi_inds(j)), true); 
-      }
     }
   }
 
-  // CALCULATE AND "ADD" REGULARISATION TERMS 
-  
-  nll += 0.5*(vtau.array().pow(2.0)/vsigma2_tau.array()).array().sum(); 
-  nll += 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
-  
+  // // // CALCULATE AND "ADD" REGULARISATION TERMS 
+   
   for(int j = 0; j < m; j++){
     nll += 0.5*(mB.array().col(j).pow(2.0)/vsigma2_beta(j)).array().sum();
     nll += 0.5*(mL.array().col(j).pow(2.0)/vsigma2_lambda(j)).array().sum();
@@ -111,9 +106,9 @@ Type genDA_f(objective_function<Type>* obj) {
   }
   
   
-  // CALCULATE AND "ADD" LOG- DETERMINANT TERM
+  // // CALCULATE AND "ADD" LOG- DETERMINANT TERM
 
-  // Create d x d identity matrix
+  // // Create d x d identity matrix
 
   matrix<Type> mI(d,d);
   mI.setZero(); 
@@ -126,7 +121,9 @@ Type genDA_f(objective_function<Type>* obj) {
     }
   }
 
-  // Then iterate through i and to calculate log-determinant term
+  
+
+  // // Then iterate through i and to calculate log-determinant term
 
   for(int i = 0; i < n; i++){
     matrix<Type> mVal(d,d);
@@ -152,18 +149,8 @@ Type genDA_f(objective_function<Type>* obj) {
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
-        Type sderiv = ((y(i,j)+vphi(vphi_inds(j)))*(vphi(vphi_inds(j))*exp(mEta(i,j)))/pow(vphi(vphi_inds(j)) + exp(mEta(i,j)),2.0));
+        Type sderiv = ((vphi(vphi_inds(j)))*(vphi(vphi_inds(j))*exp(mEta(i,j)))/pow(vphi(vphi_inds(j)) + exp(mEta(i,j)),2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
-      }
-      if(response_types(j)==6){
-        // ZERO INFLATED POISSON DISTRIBUTION
-        Type sderiv = 0.0;
-        if(y(i,j)==0){ 
-         sderiv = -1*( (vphi(vphi_inds(j)) -1.0)*exp(mEta(i,j))*(vphi(vphi_inds(j))*(-exp(exp(mEta(i,j))) + exp(mEta(i,j) + exp(mEta(i,j))) + 1 ) -1 ))/pow(( (vphi(vphi_inds(j))*(exp(exp(mEta(i,j))) -1.0 ) ) + 1.0 ), 2.0);
-        } else {
-        sderiv = exp(mEta(i,j));
-        }
-        mVal += sderiv*(lambda_j*lambda_j.transpose()); 
       }
     }
     matrix<Type> mDet = mVal + mI;
@@ -175,3 +162,5 @@ Type genDA_f(objective_function<Type>* obj) {
 }
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR this
+
+

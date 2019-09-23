@@ -9,7 +9,6 @@ Type genDA_f_predict(objective_function<Type>* obj) {
 
   DATA_MATRIX(y);
   DATA_MATRIX(X);
-  DATA_SCALAR(vsigma2_tau);
   DATA_IVECTOR(response_types); 
   DATA_INTEGER(d);
   DATA_MATRIX(mB); // optimised from previous TMB call
@@ -17,7 +16,6 @@ Type genDA_f_predict(objective_function<Type>* obj) {
   DATA_MATRIX(vbeta0); //optimised from previous TMB call
   DATA_MATRIX(vphi); //optimised from previous TMB call
   PARAMETER_MATRIX(mU);
-  PARAMETER(vtau);
 
   int n = 1 ;
   int m = y.array().cols();
@@ -29,9 +27,7 @@ Type genDA_f_predict(objective_function<Type>* obj) {
       }
   }
 
-  matrix<Type> oneM = mOnes.array().row(0);
-  
-  matrix<Type> mEta = vtau*oneM + vbeta0.transpose() + X*mB +  mU*mL;
+    matrix<Type> mEta = vbeta0.transpose() + X*mB +  mU*mL;
 
     // CALCULATE LOG LIKELIHOOD
 
@@ -60,18 +56,12 @@ Type genDA_f_predict(objective_function<Type>* obj) {
         Type var = mu + pow(mu,2.0)/vphi(j);
         nll-= dnbinom2(y(0,j), mu, var, true);
       }
-       if(response_types(j)==6){
-        // ZERO INFLATED POISSON DISTRIBUTION
-        vphi(j) = vphi(j)/ (1.0 +vphi(j));
-        nll -= dzipois(y(0,j), exp(mEta(0,j)),vphi(j), true); 
-      }
     }
   
   REPORT(mEta);
   
   // // CALCULATE AND "ADD" REGULARISATION TERMS 
   
-  nll += 0.5*pow(vtau,2.0)/vsigma2_tau;
   nll += 0.5*(mU.array().row(0).pow(2.0)).array().sum();
   
   
@@ -116,18 +106,8 @@ Type genDA_f_predict(objective_function<Type>* obj) {
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
-        Type sderiv = ((y(i,j)+vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
+        Type sderiv = ((vphi(j))*(vphi(j)*exp(mEta(i,j)))/pow(vphi(j) + exp(mEta(i,j)),2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
-      }
-      if(response_types(j)==6){
-        // ZERO INFLATED POISSON DISTRIBUTION
-        Type sderiv = 0.0;
-        if(y(i,j)==0){ 
-         sderiv = -1*( (vphi(j) -1.0)*exp(mEta(i,j))*(vphi(j)*(-exp(exp(mEta(i,j))) + exp(mEta(i,j) + exp(mEta(i,j))) + 1 ) -1 ))/pow(( (vphi(j)*(exp(exp(mEta(i,j))) -1.0 ) ) + 1.0 ), 2.0);
-        } else {
-        sderiv = exp(mEta(i,j));
-        }
-        mVal += sderiv*(lambda_j*lambda_j.transpose()); 
       }
     }
     matrix<Type> mDet = mVal + mI;

@@ -4,7 +4,6 @@
 #' @export
 #' @param object an object of class 'genDA'.
 #' @param newdata A new data frame or matrix of response data. Must be numeric. Column response (family) types will be assumed to match that of the trained genDA object.
-#' @param newX A new data frame or matrix of known covariate data.
 #' @param ... not used.
 #' 
 #' @return An object including the following components:
@@ -15,7 +14,7 @@
 #' @export
 
 
-predict.genDA <- function(object, newdata, newX = NULL, ...){
+predict.genDA <- function(object, newdata, ...){
   
   if (!inherits(object, "genDA"))  {
     stop("object not of class 'genDA'")
@@ -39,10 +38,6 @@ predict.genDA <- function(object, newdata, newX = NULL, ...){
   
   newdata <- as.matrix(newdata)
   
-  if(!is.null(newX)){
-    newX <-  as.matrix(newX)
-  }
-  
   n_k = apply(.vec2mat(vc),2, sum)
   
   n_test <- nrow(newdata)
@@ -51,17 +46,13 @@ predict.genDA <- function(object, newdata, newX = NULL, ...){
   if(common.covariance){
     p <- object$side.list$p
     num.lv <- object$side.list$num.lv
-    if(object$side.list$row.eff){vsigma2_tau <- rep(1.0E0,n_test)} else {vsigma2_tau <- rep(1.0E-4,n_test)}
     disp <-  object$side.list$disp
   } else {
     p <- object[[1]]$side.list$p
     num.lv <- object[[1]]$side.list$num.lv
-    if(object[[1]]$side.list$row.eff){vsigma2_tau <- rep(1.0E0,n_test)} else {vsigma2_tau <- rep(1.0E-4,n_test)}
     disp <- object[[1]]$side.list$disp
   }
 
-  row.init <- rep(0,n_test)
-  
   mU.init <- matrix(rnorm(n_test*num.lv), nrow=n_test, ncol=num.lv) 
   
   K <- length(class_names)
@@ -81,40 +72,37 @@ predict.genDA <- function(object, newdata, newX = NULL, ...){
       
       if(common.covariance){
         
-        if(object$side.list$row.eff){data$model_name = "genDA_f_predict"} else {data$model_name = "genDA_f_predict_null_row"}
+        data$model_name = "genDA_f_predict"
         data$y <- t(as.matrix(newdata[i, ]))
-        data$X <- t(as.matrix(c(class_test[k, ], newX[i, ])))
-        if(object$side.list$row.eff){data$vsigma2_tau <- vsigma2_tau[i]}
+        data$X <- t(as.matrix(class_test[k, ]))
         data$response_types <- object$side.list$tmb_types
         data$d <- num.lv
-        data$mB <- object$params$Xcoef
+        data$mB <- as.matrix(object$params$Xcoef)
         data$mL <- object$params$mL
         data$vbeta0 <- as.matrix(object$params$beta0)
         if(disp){data$vphi <- as.matrix(object$params$phi)} else{data$vphi <- as.matrix(rep(0, m))}
         
         parameters$mU <- t(as.matrix(mU.init[i,]))
-        if(object$side.list$row.eff){parameters$vtau <- row.init[i]}
         
       } else {
         
-        if(object[[k]]$side.list$row.eff){data$model_name = "genDA_f_predict"} else {data$model_name = "genDA_f_predict_null_row"}
+        data$model_name = "genDA_f_predict"
         data$y <- t(as.matrix(newdata[i, ]))
-        if(!is.null(newX)){data$X <- t(as.matrix(newX[i, ]))} else {data$X <- t(as.matrix(rep(0, 1)))}
-        if(object[[k]]$side.list$row.eff){data$vsigma2_tau <- vsigma2_tau[i]}
+        data$X <- t(as.matrix(rep(0, 1)))
         data$response_types <- object[[1]]$side.list$tmb_types
         data$d <- num.lv
-        if(!is.null(newX)){data$mB <- object[[k]]$params$Xcoef} else {data$mB <- as.matrix(t(rep(0, m))) }
+        data$mB <- as.matrix(t(rep(0, m))) 
         data$mL <- object[[k]]$params$mL
         data$vbeta0 <- as.matrix(object[[k]]$params$beta0)
         if(disp){data$vphi <- as.matrix(object[[k]]$params$phi)} else{data$vphi <- as.matrix(rep(0, m))}
         
         parameters$mU <- t(as.matrix(mU.init[i,]))
-        if(object[[k]]$side.list$row.eff){parameters$vtau <- row.init[i]}
+
         
       }
       
-      obj <- MakeADFun(data,parameters,DLL = "genDA", silent=TRUE,  inner.control=list(mgcmax = 1e+200,maxit = 1000,tol10=0.01))
-      opt <-  nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6))
+      obj <- suppressWarnings(MakeADFun(data,parameters,DLL = "genDA", silent=TRUE,  inner.control=list(mgcmax = 1e+200,maxit = 1000,tol10=0.01)))
+      opt <-  suppressWarnings(nlminb(obj$par,obj$fn, obj$gr,control=list(rel.tol=1.0E-6)))
   
       n_k[k] <- n_k[k] + 1
       

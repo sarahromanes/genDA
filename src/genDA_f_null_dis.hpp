@@ -9,18 +9,14 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
 
   DATA_MATRIX(y);
   DATA_MATRIX(X);
-  DATA_SCALAR(sigma2_beta0);
   DATA_VECTOR(vsigma2_beta);
   DATA_VECTOR(vsigma2_lambda);
-  DATA_VECTOR(vsigma2_tau);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
   DATA_INTEGER(d);
   
   PARAMETER_MATRIX(mB);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
-  PARAMETER_MATRIX(vtau);
-  PARAMETER_MATRIX(vbeta0);
 
   int n = y.array().rows();
   int m = y.array().cols();
@@ -44,17 +40,7 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
     }
   }
   
-  matrix<Type> mOnes(n,m); // create a matrix of ones, and then extract a row and column below to get mOnes (length m, and n) below
-  for(int i =0; i < n; i++){
-      for(int j = 0; j < m; j++){
-          mOnes(i,j) = 1;
-      }
-  }
-
-  matrix<Type> oneM = mOnes.array().row(0);
-  matrix<Type> oneN = mOnes.array().col(0);
-
-  matrix<Type> mEta = vtau*oneM + oneN*vbeta0.transpose() + X*mB +  mU*mL;
+  matrix<Type> mEta =  X*mB +  mU*mL;
 
     // CALCULATE LOG LIKELIHOOD
 
@@ -74,9 +60,6 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
   }
 
   // CALCULATE AND "ADD" REGULARISATION TERMS 
-  
-  nll += 0.5*(vtau.array().pow(2.0)/vsigma2_tau.array()).array().sum(); 
-  nll += 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
   
   for(int j = 0; j < m; j++){
     nll += 0.5*(mB.array().col(j).pow(2.0)/vsigma2_beta(j)).array().sum();

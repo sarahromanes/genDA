@@ -2,11 +2,9 @@
 #' @description Fits a genDA model for multivariate data through generalised linear latent variable modelling.
 #'
 #' @param y (n x m) matrix or data.frame of responses.
-#' @param X matrix or data.frame of covariates
 #' @param class a factor of class information.
 #' @param num.lv  number of latent variables, d, in gllvm model. Non-negative integer, less than number of response variables (m). Defaults to 2.
-#' @param family  distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{"poisson"} (with log link), \code{"ZIP"} (Zero Inflated Poisson), \code{"negative-binomial"} (with log link), \code{"binomial"} (with \code{logit} link), \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.
-#' @param row.eff logical. If \code{TRUE} (default is \code{FALSE}), row effects are included in the model
+#' @param family  distribution function for responses, to describe the distribution of each column. Columns can be of different family types. Family options are \code{"poisson"} (with log link), \code{"negative-binomial"} (with log link), \code{"binomial"} (with \code{logit} link), \code{"gaussian"}, and \code{"log-normal"}. Either a vector of family types matching the column length of the data can be provided, otherwise if a single family type is provided the algorithm will assume all columns match the single family type.
 #' @param standard.errors logical. If \code{TRUE} (default is \code{FALSE}) standard errors for parameter estimates are calculated.
 #' @param common.covariance logical. Default \code{TRUE}. Specifies whether different covariance structures should be fit for each class, if \code{class} is non-null. If class is not provided, then only one covariance structure can be fit. See vignette for more details.
 #' 
@@ -37,7 +35,7 @@
 #' @importFrom MASS ginv
 #' @importFrom purrr map_chr
  
-genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, standard.errors = FALSE, common.covariance = TRUE){
+genDA <- function(y, class = NULL, family, num.lv=2, standard.errors = FALSE, common.covariance = TRUE){
   
   y <- as.matrix(y)
   
@@ -62,25 +60,22 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
   labels <- colnames(y)
   labels.row <- rownames(y)
   
-  if(!is.null(class)|!is.null(X)){
+  if(!is.null(class)){
     
-    if(!is.null(class)){
-      classF <- as.factor(class)
-      class <- .vec2mat(classF)
-      colnames(class) <- levels(classF)
-      class <- class[,-1] # ensure columns are linearly independent
+    K = length(unique(class))
+    classF <- as.factor(class)
+    class <- .vec2mat(classF)
+    colnames(class) <- levels(classF)
+    class[,1] <- 1 # ensure columns are linearly independent
+    
+    if(common.covariance){
+      X <- as.matrix(class)
+      p <- ncol(X)
     }
       
-    if(common.covariance){
-      if(!is.null(X)){
-          X <- cbind(class, as.matrix(X))
-        } else {
-          X <- as.matrix(class)
-       }
-    }
-      p <- ncol(X)
   } else {
     classF <- NULL
+    X <- NULL
   }
 
   
@@ -92,7 +87,7 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
   }
   if(length(family)==1 & m > 1){
     
-    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial", "ZIP")))
+    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial")))
       stop("Input family not supported")
     
     response_types <- rep(family, each=m)
@@ -112,15 +107,12 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
     if(family=="negative-binomial"){
       tmb_types <- rep(5,m)
     }
-    if(family=="ZIP"){
-      tmb_types <- rep(6,m)
-    }
   }else{
     response_types <- family
     tmb_types <- rep(0, m)
     for(j in 1:m){
       
-      if(!(response_types[j] %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial", "ZIP")))
+      if(!(response_types[j] %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial")))
         stop(paste("Variable", j, "- input family :",response_types[j],"not supported"))
       
       if(response_types[j]=="binomial"){
@@ -141,18 +133,15 @@ genDA <- function(y, X = NULL, class = NULL, family, num.lv=2, row.eff= FALSE, s
       if(response_types[j]=="negative-binomial"){
         tmb_types[j] <- 5
       }
-      if(response_types[j]=="ZIP"){
-        tmb_types[j] <- 6
-      }
     }
   }
   
  call <- match.call()
   
   if(common.covariance){
-    return(suppressWarnings(.genDA_fit_LDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types =response_types, standard.errors = standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
+    return(suppressWarnings(.genDA_fit_LDA(y = y, X = X, class = classF, num.lv = num.lv, tmb_types = tmb_types, response_types =response_types, standard.errors = standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
   } else {
-    return(suppressWarnings(.genDA_fit_QDA(y = y, X = X, class = classF, num.lv = num.lv, row.eff = row.eff, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
+    return(suppressWarnings(.genDA_fit_QDA(y = y, X = X, class = classF, num.lv = num.lv, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
   }
 
 }

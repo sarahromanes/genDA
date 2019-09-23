@@ -1,12 +1,10 @@
 
 ####################### LDA FIT (common covariance structure) ###################################
 
-.genDA_fit_LDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
+.genDA_fit_LDA <- function(y, X, class, num.lv, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
   
   n <- nrow(y)
   m <- ncol(y)
-  
-  vbeta0.hat <- c()
   
   if(!is.null(X)){
     p <- ncol(X)
@@ -14,38 +12,38 @@
     for (j in 1:m) {
       
       if (response_types[j]=="binomial") {
-        res <- glm(y[,j]~X  ,family=binomial)
+        res <- glm(y[,j]~X-1  ,family=binomial)
       }
-      if (response_types[j]=="poisson"|response_types[j]=="ZIP") {
-        res <- glm(y[,j]~X, family=poisson)
+      if (response_types[j]=="poisson") {
+        res <- glm(y[,j]~X-1, family=poisson)
       }
       if(response_types[j]=="gaussian"){
-        res <- lm(y[,j]~X)
+        res <- lm(y[,j]~X-1)
       }
       if(response_types[j]=="log-normal"){
-        res <- lm(log(y[,j])~X)
+        res <- lm(log(y[,j])~X-1)
       }
       if(response_types[j]=="negative-binomial"){
-        res <- mvabund::manyglm(y[,j]~X, family="negative.binomial", K=1)
+        res <- mvabund::manyglm(y[,j]~X-1, family="negative.binomial", K=1)
       }
-      vbeta0.hat[j] <- res$coef[1]
-      mB.hat[,j] <- res$coef[-1]
+      mB.hat[,j] <- res$coef
     }
     
     # SET RIDGE REGRESSION CONSTANTS
     
-    sigma2_beta0	<- 1E0
     vsigma2_beta    <- rep(1E1,m)
-    vsigma2_lambda  <- rep(1.0E0,m)
-    if(row.eff){vsigma2_tau <- rep(1.0E0,n)} 
+    vsigma2_lambda  <- rep(1.0E1,m)
     
   } else {
+    
+    vbeta0.hat <- c()
+    
     for (j in 1:m) {
       
       if (response_types[j]=="binomial") {
         res <- glm(y[,j]~1  ,family=binomial)
       }
-      if (response_types[j]=="poisson"|response_types[j]=="ZIP") {
+      if (response_types[j]=="poisson") {
         res <- glm(y[,j]~1, family=poisson)
       }
       if(response_types[j]=="gaussian"){
@@ -65,7 +63,7 @@
     
     sigma2_beta0	<- 1E0
     vsigma2_lambda  <- rep(1.0E0,m)
-    if(row.eff){vsigma2_tau <- rep(1.0E-1,n)}
+
   }
   ## Initialise phi's ##
   
@@ -93,11 +91,7 @@
       label_phi[j] <- 1
     }
     
-    if(response_types[j]=="ZIP"){
-      vphi[j] <- (mean(y[,j]==0)*0.98) + 0.01
-      vphi[j] <- vphi[j]/(1-vphi[j])
-      label_phi[j] <- 1
-    }
+
     
   }
   
@@ -121,49 +115,40 @@
   if(num.lv > 0) lambda <- mL.init[lower.tri(mL.init,diag = TRUE)]
   
   mU.init <- fit$mU #extracts LV
-  if(row.eff){vtau.init <- rep(0,n)}
-  vbeta0.init <- vbeta0.hat
+  if(is.null(X)){vbeta0.init <- vbeta0.hat}
   if(!is.null(X)){mB.init <- mB.hat}
   
   # ----------------- FIT TMB ----------------------- # 
   
-  if(row.eff & !is.null(X) & disp){
+  if(!is.null(X) & disp){
     model_name = "genDA_f"
-  } else if(row.eff & !is.null(X) & !disp){
+  } else if(!is.null(X) & !disp){
     model_name = "genDA_f_null_dis"
-  } else if(row.eff & is.null(X) & disp){
+  } else if(is.null(X) & disp){
     model_name = "genDA_f_null_X"
-  } else if(row.eff & is.null(X) & !disp){
+  } else if(is.null(X) & !disp){
     model_name = "genDA_f_null_X_dis"
-  } else if( !row.eff & !is.null(X) & disp){
-    model_name = "genDA_f_null_row"
-  } else if(!row.eff & !is.null(X) & !disp){
-    model_name = "genDA_f_null_row_dis"
-  } else if(!row.eff & is.null(X) & disp){
-    model_name = "genDA_f_null_row_X"
-  } else if(!row.eff & is.null(X) & !disp){
-    model_name = "genDA_f_null_row_X_dis"
-  }
+  } 
   
   data <- list()
   data$model_name <- model_name
   data$y <- y
   if(!is.null(X)){data$X <- X}
-  data$sigma2_beta0 <- sigma2_beta0
+  if(is.null(X)){data$sigma2_beta0 <- sigma2_beta0}
   if(!is.null(X)){data$vsigma2_beta <- vsigma2_beta}
   data$vsigma2_lambda <- vsigma2_lambda
-  if(row.eff){data$vsigma2_tau <- vsigma2_tau}
   data$response_types <- tmb_types
   data$d <- num.lv
+  if(!is.null(X)){data$p <- nrow(mB.init)}
   if(disp){data$vphi_inds <- vphi_inds}
   
   parameters <- list()
   if(disp){parameters$log_vphi <- as.matrix(log(vphi))}
-  if(!is.null(X)) {parameters$mB <- mB.init}
+  #if(!is.null(X)) {parameters$mB <- mB.init}
+  if(!is.null(X)){parameters$beta <- as.numeric(t(mB.init))}
   parameters$lambda <- lambda
   parameters$mU <- mU.init
-  if(row.eff){parameters$vtau <- as.matrix(vtau.init)}
-  parameters$vbeta0 <- as.matrix(vbeta0.init)
+  if(is.null(X)){parameters$vbeta0 <- as.matrix(vbeta0.init)}
   
   
   obj <-  MakeADFun(data,parameters,DLL = "genDA", silent=TRUE, inner.control=list(mgcmax = 1e+200,maxit = 1000))
@@ -172,10 +157,9 @@
   param <- opt$par
   lj <- names(param)=="lambda"
   ui <- names(param)=="mU"
-  b0j <- names(param)=="vbeta0"
-  if(row.eff){ti <- names(param)=="vtau"}
+  if(is.null(X)){b0j <- names(param)=="vbeta0"}
   if(disp){vj <- names(param)=="log_vphi"}
-  if(!is.null(X)){bj <- names(param)=="mB"}
+  if(!is.null(X)){bj <- names(param)=="beta"}
   
   val <- -1*opt$objective
   
@@ -193,26 +177,25 @@
   
   mB.hat <-  NULL
   if(!is.null(X)){
-    mB.hat <- t(matrix(nrow=m,ncol=p, param[bj]))
+    beta.hat <- param[bj]
+    mB.hat <- matrix(beta.hat, p, m, byrow =T)
     colnames(mB.hat) <- labels
     rownames(mB.hat) <- colnames(X)
+    vbeta0.hat <- mB.hat[1,] ; names(vbeta0.hat) <- labels
+    mB.hat <- mB.hat[-1,]
+    p <- ncol(mB.hat)
   }
   
-  vtau.hat <- NULL
-  if(row.eff){vtau.hat <- param[ti]; names(vtau.hat) <- labels.row}
-  
-  vbeta0.hat <- opt$par[b0j]; names(vbeta0.hat) <- labels
+  if(is.null(X)){vbeta0.hat <- opt$par[b0j]; names(vbeta0.hat) <- labels}
   
   vphi.hat <- NULL
   if(disp){
     vphi.hat <- rep(0,m)
     for(j in 1:m){
       if(label_phi[j]!=1){next}
-      if(response_types[j]=="ZIP"){
-        vphi.hat[which(label_phi==1)] <- exp(opt$par[vj])/(1+ exp(opt$par[vj]))
-      } else {
+ 
         vphi.hat[which(label_phi==1)] <- exp(opt$par[vj])
-      }
+      
     }
     names(vphi.hat) <- labels
   }
@@ -221,7 +204,6 @@
     
     sd <- list()
     
-    #sds <- obj$he()
     sds <- optimHess(obj$par,obj$fn, obj$gr)
     cov.mat <- ginv(sds)
     ses <- sqrt(diag(abs(cov.mat)))
@@ -233,11 +215,9 @@
         if(label_phi[j]!=1){
           next
         }
-        if(response_types[j]!="ZIP"){
-          sd$phi <- ses[names(ses)=="log_vphi"]*vphi.hat; names(sd$phi) <- labels
-        } else {
+        
           sd$phi <- ses[names(ses)=="log_vphi"]*vphi.hat/(1 + vphi.hat); names(sd$phi) <- labels
-        }
+        
       }
     } 
     
@@ -252,10 +232,6 @@
       colnames(sd$mU) <- colnames(sd$mL)
     }
     
-    if(row.eff){
-      sd$row <- ses[names(ses)=="vtau"]
-      names(sd$row) <- labels.row
-    }
     sd$beta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels 
     if(!is.null(X)){
       sd$Xcoef <- t(matrix(nrow=m,ncol=p, ses[bj]))
@@ -274,7 +250,6 @@
   params$mL <-t(theta)
   params$beta0 <- vbeta0.hat
   params$Xcoef <- mB.hat
-  params$row <- vtau.hat
   params$phi <- vphi.hat
   
   side.list <- list()
@@ -283,7 +258,6 @@
   side.list$vc <- vc
   side.list$n <- n
   side.list$num.lv <- num.lv
-  side.list$row.eff <- row.eff
   side.list$disp <- disp
   
   object <- list()
@@ -303,7 +277,7 @@
 
 ####################### QDA FIT (seperate covariance structure) #################################
 
-.genDA_fit_QDA <- function(y, X, class, num.lv, row.eff, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
+.genDA_fit_QDA <- function(y, X, class, num.lv, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
   
   K <- length(levels(class))
   
@@ -318,7 +292,7 @@
       X_sub <- NULL
     }
     
-    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv, row.eff =row.eff,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row[which(class==levels(class)[k])], family=family))
+    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row[which(class==levels(class)[k])], family=family))
     
   }
   

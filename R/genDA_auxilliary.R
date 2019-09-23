@@ -83,7 +83,7 @@
 
   if(length(family)==1 & m > 1){
     
-    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial", "ZIP")))
+    if(!(family %in% c("poisson","binomial", "gaussian", "log-normal", "negative-binomial")))
       stop("Input family not supported")
     
     if(family=="log-normal"){
@@ -95,9 +95,6 @@
       family="negative.binomial"
     }
     
-    if(family =="ZIP"){
-      family = "poisson"
-    }
     
     if(!is.null(X)){
       if(family=="gaussian"){
@@ -127,10 +124,6 @@
       }
       if(response_types[j]=="negative-binomial"){
         response_types[j]="negative.binomial"
-      }
-      
-      if(response_types[j]=="ZIP"){
-        response_types[j]="poisson"
       }
       
       if(!is.null(X)){

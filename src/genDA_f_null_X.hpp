@@ -10,7 +10,6 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
   DATA_MATRIX(y);
   DATA_SCALAR(sigma2_beta0);
   DATA_VECTOR(vsigma2_lambda);
-  DATA_VECTOR(vsigma2_tau);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson), or 3 (Gaussian), or 4 (Log-Normal), or 5 (NB)
   DATA_INTEGER(d);
   DATA_IVECTOR(vphi_inds);
@@ -18,7 +17,6 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
   PARAMETER_VECTOR(log_vphi);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
-  PARAMETER_MATRIX(vtau);
   PARAMETER_MATRIX(vbeta0);
 
   int n = y.array().rows();
@@ -55,7 +53,7 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
   matrix<Type> oneM = mOnes.array().row(0);
   matrix<Type> oneN = mOnes.array().col(0);
 
-  matrix<Type> mEta = vtau*oneM + oneN*vbeta0.transpose() +  mU*mL;
+  matrix<Type> mEta =  oneN*vbeta0.transpose() +  mU*mL;
 
     // CALCULATE LOG LIKELIHOOD
 
@@ -85,17 +83,11 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
         Type var = mu + pow(mu,2.0)/vphi(vphi_inds(j));
         nll-= dnbinom2(y(i,j), mu, var, true);
       }
-       if(response_types(j)==6){
-        // ZERO INFLATED POISSON DISTRIBUTION
-        vphi(vphi_inds(j))= vphi(vphi_inds(j))/ (1.0 +vphi(vphi_inds(j)));
-        nll -= dzipois(y(i,j), exp(mEta(i,j)),vphi(vphi_inds(j)), true); 
-      }
     }
   }
 
   // CALCULATE AND "ADD" REGULARISATION TERMS 
-  
-  nll += 0.5*(vtau.array().pow(2.0)/vsigma2_tau.array()).array().sum(); 
+
   nll += 0.5*(vbeta0.array().pow(2.0)/sigma2_beta0).array().sum();
   
   for(int j = 0; j < m; j++){
@@ -148,18 +140,8 @@ Type genDA_f_null_X(objective_function<Type>* obj) {
       }
       if(response_types(j)==5){
         // NEGATIVE BINOMIAL DISTRIBUTION
-        Type sderiv = ((y(i,j)+vphi(vphi_inds(j)))*(vphi(vphi_inds(j))*exp(mEta(i,j)))/pow(vphi(vphi_inds(j)) + exp(mEta(i,j)),2.0));
+        Type sderiv = ((vphi(vphi_inds(j)))*(vphi(vphi_inds(j))*exp(mEta(i,j)))/pow(vphi(vphi_inds(j)) + exp(mEta(i,j)),2.0));
         mVal += sderiv*(lambda_j*lambda_j.transpose());
-      }
-      if(response_types(j)==6){
-        // ZERO INFLATED POISSON DISTRIBUTION
-        Type sderiv = 0.0;
-        if(y(i,j)==0){ 
-         sderiv = -1*( (vphi(vphi_inds(j)) -1.0)*exp(mEta(i,j))*(vphi(vphi_inds(j))*(-exp(exp(mEta(i,j))) + exp(mEta(i,j) + exp(mEta(i,j))) + 1 ) -1 ))/pow(( (vphi(vphi_inds(j))*(exp(exp(mEta(i,j))) -1.0 ) ) + 1.0 ), 2.0);
-        } else {
-        sderiv = exp(mEta(i,j));
-        }
-        mVal += sderiv*(lambda_j*lambda_j.transpose()); 
       }
     }
     matrix<Type> mDet = mVal + mI;
