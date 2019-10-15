@@ -141,7 +141,7 @@ genDA <- function(y, class = NULL, family, num.lv=2, standard.errors = FALSE, co
   if(common.covariance){
     return(suppressWarnings(.genDA_fit_LDA(y = y, X = X, class = classF, num.lv = num.lv, tmb_types = tmb_types, response_types =response_types, standard.errors = standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
   } else {
-    return(suppressWarnings(.genDA_fit_QDA(y = y, X = X, class = classF, num.lv = num.lv, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
+    return(suppressWarnings(.genDA_fit_QDA(y = y, class = classF, num.lv = num.lv, tmb_types = tmb_types, response_types=response_types, standard.errors= standard.errors, call = call, labels = labels, labels.row = labels.row, family = family)))
   }
 
 }

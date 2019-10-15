@@ -277,7 +277,7 @@
 
 ####################### QDA FIT (seperate covariance structure) #################################
 
-.genDA_fit_QDA <- function(y, X, class, num.lv, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
+.genDA_fit_QDA <- function(y, class, num.lv, tmb_types, response_types, standard.errors, call, labels, labels.row, family){
   
   K <- length(levels(class))
   
@@ -286,13 +286,7 @@
   for(k in 1:K){
     y_sub <- y[which(class==levels(class)[k]), ]
     
-    if(!is.null(X)){
-      X_sub <- X[which(class==levels(class)[k]), ]
-    } else {
-      X_sub <- NULL
-    }
-    
-    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =X_sub, class = class, num.lv = num.lv,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row[which(class==levels(class)[k])], family=family))
+    object[[k]] <- quiet(.genDA_fit_LDA(y =y_sub, X =NULL, class = class, num.lv = num.lv,tmb_types = tmb_types, response_types =  response_types, standard.errors = standard.errors, call = call, labels =labels, labels.row =labels.row[which(class==levels(class)[k])], family=family))
     
   }
   
