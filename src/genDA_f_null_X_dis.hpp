@@ -12,6 +12,7 @@ Type genDA_f_null_X_dis(objective_function<Type>* obj) {
   DATA_VECTOR(vsigma2_lambda);
   DATA_IVECTOR(response_types); 
   DATA_INTEGER(d);
+  DATA_INTEGER(p);
 
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
