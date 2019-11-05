@@ -14,7 +14,7 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
   DATA_INTEGER(d);
   
-  PARAMETER_MATRIX(mB);
+  PARAMETER_MATRIX(beta);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
 
@@ -39,6 +39,19 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
       }
     }
   }
+
+  matrix<Type> mB(p,m);
+
+    for (int j=0; j<m; j++){
+      for (int k=0; k<p; k++){
+          mB(k,j) = beta(j);
+          if (k > 0){
+            mB(k,j) = beta(k+j+k*m-(k*(k-1))/2-2*k);
+          }
+        
+      }
+    }
+  
   
   matrix<Type> mEta =  X*mB +  mU*mL;
 
