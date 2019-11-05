@@ -182,7 +182,7 @@
     colnames(mB.hat) <- labels
     rownames(mB.hat) <- colnames(X)
     vbeta0.hat <- mB.hat[1,] ; names(vbeta0.hat) <- labels
-    mB.hat <- mB.hat[-1,]
+    mB.hat <- as.matrix(mB.hat[-1,])
     p <- ncol(mB.hat)
   }
   
@@ -235,9 +235,9 @@
     if(is.null(X)){sd$beta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels}
     
     if(!is.null(X)){
-      sd.beta <- matrix(ses[names(ses)=="mB"], p, m, byrow = T)
+      sd.beta <- matrix(ses[names(ses)=="beta"], p+1, m, byrow = T)
       sd$vbeta0 <- sd.beta[1, ]; names(sd$vbeta0) <- labels
-      sd$Xcoef <- sd.beta[-1,]
+      sd$Xcoef <- t(as.matrix(sd.beta[-1,]))
       colnames(sd$Xcoef) <- labels
     }
     
