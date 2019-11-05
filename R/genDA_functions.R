@@ -232,11 +232,15 @@
       colnames(sd$mU) <- colnames(sd$mL)
     }
     
-    sd$beta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels 
+    if(is.null(X)){sd$beta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels}
+    
     if(!is.null(X)){
-      sd$Xcoef <- t(matrix(nrow=m,ncol=p, ses[bj]))
+      sd.beta <- matrix(ses[bj], p, m, byrow = T)
+      sd$vbeta0 <- sd.beta[1, ]; names(sd$vbeta0) <- labels
+      sd$Xcoef <- sd.beta[-1,]
       colnames(sd$Xcoef) <- labels
     }
+    
   }
   
   if(is.null(X)){p <-  0}
