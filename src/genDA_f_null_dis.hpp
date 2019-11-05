@@ -15,7 +15,7 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
   DATA_INTEGER(p);
   DATA_INTEGER(d);
   
-  PARAMETER_MATRIX(beta);
+  PARAMETER_VECTOR(beta);
   PARAMETER_VECTOR(lambda);
   PARAMETER_MATRIX(mU);
 
