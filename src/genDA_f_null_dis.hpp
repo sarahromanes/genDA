@@ -12,6 +12,7 @@ Type genDA_f_null_dis(objective_function<Type>* obj) {
   DATA_VECTOR(vsigma2_beta);
   DATA_VECTOR(vsigma2_lambda);
   DATA_IVECTOR(response_types); // response_types needs to be coded in as integer 1 (Bernoulli) or 2 (Poisson)
+  DATA_INTEGER(p);
   DATA_INTEGER(d);
   
   PARAMETER_MATRIX(beta);
