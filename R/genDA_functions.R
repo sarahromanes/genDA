@@ -235,7 +235,7 @@
     if(is.null(X)){sd$beta0 <- ses[names(ses)=="vbeta0"]; names(sd$beta0) <- labels}
     
     if(!is.null(X)){
-      sd.beta <- matrix(ses[bj], p, m, byrow = T)
+      sd.beta <- matrix(ses[names(ses)=="beta"], p, m, byrow = T)
       sd$vbeta0 <- sd.beta[1, ]; names(sd$vbeta0) <- labels
       sd$Xcoef <- sd.beta[-1,]
       colnames(sd$Xcoef) <- labels
